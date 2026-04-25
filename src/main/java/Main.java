@@ -3,8 +3,8 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.LineReader;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.lang.Thread;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -13,7 +13,6 @@ import java.util.concurrent.ThreadLocalRandom;
 // change the language as well
 
 public class Main {
-
     public static void main(String[] args) {
         InputManager.init();
 
@@ -23,16 +22,16 @@ public class Main {
 
         InputManager.close();
     }
-
-
 }
 
 
 
 // credits to gemini for this one, it is really something :)
+// jLine magic
 class InputManager {
     private static Terminal terminal;
     private static LineReader reader;
+    private static String prompt = GameSettings.prompt;
 
     public static void init() {
         try {
@@ -50,7 +49,10 @@ class InputManager {
     // returns the letter lowercased
     public static String getLetter() {
         try {
+            System.out.print(prompt);
             int input = terminal.reader().read();
+            System.out.print(String.valueOf((char) input).toLowerCase());
+            System.out.println();
             return String.valueOf((char) input).toLowerCase();
         } catch (Exception e) {
             System.err.println("Error reading input: " + e.getMessage());
@@ -59,7 +61,7 @@ class InputManager {
     }
 
     public static String getNextLine() {
-        return reader.readLine("> ");
+        return reader.readLine(prompt);
     }
 
     public static void close() {
@@ -73,38 +75,51 @@ class InputManager {
 
 
 // the glue that glues these scraps together
-class GameRunner extends Main {
+class GameRunner {
     protected static ScreenManager screenManager = new ScreenManager();
     protected static String consoleInput = "";
-    public static HumanPlayer player1 = new HumanPlayer();
-    public static HumanPlayer player2 = new HumanPlayer();
+
+    // captain represents the main player
+    public static HumanPlayer captain = new HumanPlayer();
+    // the guest is a possible second player
+    public static HumanPlayer guest = new HumanPlayer();
+
+/* 
+    // testing bot
+    RandomBot testingBot = new RandomBot();
+ */
+
 
     // program loop
     public void bootGame() {
         boolean gameBooted = true;
 
-        screenManager.printLoadingScreen();
+        ScreenManager.printLoadingScreen();
+
+        boolean inBattleMenu = true;
 
         while (gameBooted) {
+            inBattleMenu = true;
 
             MainMenuOptions option = runMainMenu();
 
             if (option == MainMenuOptions.Battle) {
-                GameMode gameMode = chooseGameMode();
+                while (inBattleMenu) {
+                    GameType gameType = chooseGameType();
 
-                if (gameMode == GameMode.LocalPvP) {
-                    // boot pvp
-                    System.out.println("PVP loop here");
-                } else if (gameMode == GameMode.RandomBot) {
-                    // boot pve
-                    runPVEGameLoop();
-                } else if (gameMode == GameMode.Cancel) {
-                    // go back to main menu
-                    System.out.println("Go back to main menu");
+                    if (gameType == GameType.LocalPvP) {
+                        // boot pvp
+                        System.out.println("PVP loop here");
+                    } else if (gameType == GameType.RandomBot) {
+                        // boot pve
+                        runPVEGameLoop();
+                    } else if (gameType == GameType.Cancel) {
+                        // go back to main menu
+                        inBattleMenu = false;
+                    }
                 }
-                
             } else if (option == MainMenuOptions.Settings) {
-                System.out.println("Settings and stuff");
+                ScreenManager.printSettingsScreen();
             } else if (option == MainMenuOptions.Donate) {
                 System.out.println("Do stuff with donations");
             } else if (option == MainMenuOptions.Exit) {
@@ -117,79 +132,89 @@ class GameRunner extends Main {
     // main menu, runs until a valid option is chosen
     public MainMenuOptions runMainMenu() {
         while (true) {
-            screenManager.printMainMenu();
-            consoleInput = InputManager.getNextLine();
+            ScreenManager.printMainMenu();
+            consoleInput = InputManager.getLetter();
 
-            // proto-input validation
-            if (consoleInput.length() > 1) {
-                System.out.println("Invalid input");
-            } else {
-                switch (consoleInput) {
-                    case "1":
-                        return MainMenuOptions.Battle;
+            switch (consoleInput) {
+                case "1":
+                    return MainMenuOptions.Battle;
 
-                    case "2":
-                        return MainMenuOptions.Settings;
+                case "2":
+                    return MainMenuOptions.Settings;
 
-                    case "3":
-                        return MainMenuOptions.Donate;
+                case "3":
+                    return MainMenuOptions.Donate;
 
-                    case "0":
-                        return MainMenuOptions.Exit;
+                case "6":
+                    Helpers.printMessageAndThreeDotsSlowly("CAPTAIN");
+                    Helpers.sleep(400);
+                    Helpers.printMessageAndThreeDotsSlowly("DON'T SAY THAT YOU");
+                    Helpers.sleep(800);
 
-                
-                    default:
-                        System.out.println("Invalid option");
-                        break;
-                }
+                    Helpers.printMessageAndThreeDotsSlowly("CAPTAIN, FINISH WHAT MUST BE FINISHED");
+
+                    consoleInput = InputManager.getLetter();
+
+                    if (consoleInput.equals("7")) {
+                        Helpers.printMessageAndThreeDotsSlowly("I KNOW WHAT KIND OF A MAN YOU ARE");
+                        ScreenManager.print67();
+                        Helpers.sleep(670);
+                    } else {
+                        Helpers.slowType("MEH ");
+                        Helpers.sleep(400);
+                        Helpers.slowType("WHATEVER");
+                    }
+                    
+                    break;
+
+                case "0":
+                    return MainMenuOptions.Exit;
+            
+                default:
+                    Helpers.printInvalidInputMessage();
+                    break;
             }
+            
         }
     }
 
-    public GameMode chooseGameMode() {
+    public GameType chooseGameType() {
         boolean choosingGame = true;
 
         while (choosingGame) {
-            screenManager.chooseGameModeScreen();
+            ScreenManager.chooseGameScreen();
             
-            consoleInput = InputManager.getNextLine();
+            consoleInput = InputManager.getLetter();
 
             switch (consoleInput.toLowerCase()) {
                 case "1":
-                case "one":
-                    // a random bot
-                    System.out.println("Run random bot");
-                    System.out.println("Here could be settings and configuring random bot class");
-                    return GameMode.RandomBot;
+                    // a bots
+                    return GameType.RandomBot;
 
                 case "2":
-                case "two":
                     // algorithmic bot
                     Helpers.slowType("CAPTAIN THIS FEATURE ISN'T OUT YET");
                     break;
 
                 case "3":
-                case "three":
                     // ai stuff
                     Helpers.slowType("CAPTAIN THIS FEATURE ISN'T OUT YET");
                     
                     break;
 
                 case "4":
-                case "four":
                     // pvp stuff
                     System.out.println("Run pvp");
                     System.out.println("idk");
-                    return GameMode.LocalPvP;
+                    return GameType.LocalPvP;
 
                 case "0":
                 case "e":
-                case "exit":
                     choosingGame = false;
-                    return GameMode.Cancel;
+                    return GameType.Cancel;
             
                 default:
-                    Helpers.slowType("CAPTAIN BE SERIOUS ABOUT THIS");
+                    Helpers.printInvalidInputMessage();
                     break;
             }
 
@@ -197,6 +222,227 @@ class GameRunner extends Main {
 
         return null;
     }
+    
+
+    public void runPVEGameLoop() {
+        boolean playing = true;
+        boolean askPlayAgain = true;
+        boolean gamePlayed = true;
+
+        RandomBot simpleBot = new RandomBot();
+
+        while (playing) {
+
+            ScreenManager.printScore(captain.score, simpleBot.score, captain.playerName, simpleBot.playerName, "o");
+
+            gamePlayed = runPvERound(captain, simpleBot);
+
+            System.out.println(gamePlayed);
+
+            // we quit if no game was played
+            if (!gamePlayed) return;
+
+            // ask if bro wanna play again
+            askPlayAgain = true;
+            while (askPlayAgain) {
+                Helpers.slowType("PLAY AGAIN? (y/n) ", false);
+                consoleInput = InputManager.getLetter();
+
+                if (consoleInput.toLowerCase().equals("y")) {
+                    playing = true;
+                    askPlayAgain = false;
+                } else if (consoleInput.toLowerCase().equals("n")) {
+                    playing = false;
+                    askPlayAgain = false;
+                } else {
+                    Helpers.printInvalidInputMessage();
+                    askPlayAgain = true;
+                }
+            }
+        }
+    }
+
+    // runs a round of bot vs player
+    // returns true if the game was played until the end
+    public boolean runPvERound(HumanPlayer player, Bot bot) {
+
+        bot.resetGrid();
+        player.resetGrid();
+        player.resetHitGrid();
+        GameSettings.sniperMode = false;
+
+        // choose game mode
+        GameModes gameMode = chooseGameMode();
+
+        int botTurns = 1;
+        if (gameMode == GameModes.BotEasy) {
+            botTurns = 1;
+        } else if (gameMode == GameModes.BotMedium) {
+            botTurns = 2;
+        } else if (gameMode == GameModes.BotHard) {
+            botTurns = 3;
+        } else if (gameMode == GameModes.Sniper) {
+            botTurns = 1;
+            GameSettings.sniperMode = true;
+        } else if (gameMode == null) {
+            return false;
+        }
+        
+        ScreenManager.clearConsole();
+        
+        Helpers.printMessageAndThreeDotsSlowly("DRAMATICALLY PREPARE THE BATTLEFIELD");
+
+        bot.generateShipsPositions();
+
+        Helpers.printMessageAndThreeDotsSlowly("CONFIGURING BOT");
+
+        Helpers.sleep(200);
+
+        System.out.println("BOT READY!");
+        
+        player.addShips(consoleInput, screenManager);
+
+        Helpers.sleep(400);
+        boolean gameOn;
+
+
+        int shipsRequired = 0;
+
+        List<Pair<Integer, Integer>> temp = GameSettings.copyOfShips();
+
+        for (Pair<Integer,Integer> pair : temp) {
+            shipsRequired += pair.second;
+        }
+    
+        if (player.boardObjects.size() != shipsRequired) {
+            gameOn = false;
+        } else {
+            gameOn = true;
+        }
+
+        boolean askingMove = true;
+
+        while (gameOn) {
+            Helpers.slowType("OUR GRID:");
+            player.printGrid();
+
+
+            // player move
+            do {
+                bot.computeGrid();
+                if (bot.hasLost()) {
+                    Helpers.slowType(bot.playerName + "'S GRIND IN THE END:");
+                    bot.printGrid();
+                    Helpers.printMessageAndThreeDotsSlowly(bot.playerName + " LOST, AS EXPECTED");
+                    gameOn = false;
+                    player.incrementScore();
+                    break;
+                }
+
+                ScreenManager.printScore(player.getHitCount(), bot.getHitCount(), player.playerName, bot.playerName, "h");
+
+                Helpers.slowType("CAPTAIN!");
+                Helpers.sleep(800);
+                Helpers.slowType("THIS IS WHAT WE KNOW ABOUT ENEMY'S GRID (sneak peak):"); 
+                bot.printGrid();          
+                Helpers.slowType("THIS IS WHAT WE KNOW ABOUT ENEMY'S GRID:");           
+                player.printHitList();
+
+                askingMove = true;
+                while (askingMove) {
+                    Helpers.printRandomAskMove();
+                    Helpers.slowType("YOU CAN ALSO");
+                    System.out.println("\n[G] - give up\n[Q] - quit game (rage quit, bot does not gain points, return to main menu)");
+                    System.out.println("\n");   // 2 smart and efficient newlines
+
+                    consoleInput = InputManager.getNextLine();
+                    
+                    if (consoleInput.equalsIgnoreCase("g")) {
+                        bot.incrementScore(gameMode);
+
+                        printRoundEnd(player, bot);
+                        return true;
+
+                    } else if (consoleInput.equalsIgnoreCase("q")) {
+                        printRoundEnd(player, bot);
+                        Helpers.sleep(1000);
+
+                        Helpers.slowType("CAPTAIN AS A REMAINDER YOU LOST TO: " + bot.playerName);
+                        Helpers.sleep(500);
+
+                        Helpers.slowType("LOOSER :))", 200);
+                        Helpers.sleep(2000);
+                        return false;
+
+                    } else if (!player.validTurn(consoleInput, bot)) {
+                        Helpers.printInvalidInputMessage();
+                    } else {
+                        askingMove = false;
+                    }
+                }
+                
+            } while (!player.makeTurn(consoleInput, bot, screenManager));
+
+            // we do not let bot make another turn if he already lost
+            if (!gameOn) {
+                printRoundEnd(player, bot);
+                return true;
+            }
+
+            Helpers.sleep(500);
+            Helpers.slowType(bot.playerName + "'s TURN");
+            Helpers.sleep(500);
+
+            // bot move or moves
+            boolean botMove = true;
+            for (int i = botTurns; i > 0 && gameOn; i--) {
+                botMove = true;
+                while (botMove) {
+                    player.computeGrid();
+
+                    if (player.hasLost()) {
+                        player.printGrid();
+
+                        // increment bot score acording to gameMode
+                        bot.incrementScore(gameMode);
+
+                        gameOn = false;
+                        botMove = false;
+
+                        Helpers.printMessageAndThreeDotsSlowly("CAPTAIN HOW COULD YOU LOSE?", true);
+                        Helpers.printMessageAndThreeDotsSlowly("I MEAN, HOW COULD YOU LOSE TO " + bot.playerName);
+                        Helpers.slowType("A PAUSE TO FEEL THIS LOSS");
+                        Helpers.sleep(1000);
+                        Helpers.slowType("CAPTAIN I WANT YOU TO FEEL THE DOMINANCE OF " + bot.playerName);
+                        Helpers.sleep(4000);
+                        Helpers.slowType("anyway", 30, false);
+                        Helpers.slowType(", you suck :))", 100);
+                        break;
+                    }
+
+                    if (botTurns > 1) {
+                        Helpers.slowType("BOT HAS " + i + " MOVES TO MAKE");
+                    }
+
+                    botMove = !bot.makeTurn(consoleInput, player, screenManager);
+
+                    Helpers.slowType("OUR GRID AFTER THE FEROCIOUS ATTACK OF " + bot.playerName);
+                    player.printGrid();
+                    Helpers.sleep(1000);
+                }
+            }
+
+
+            if (gameOn) {
+                Helpers.slowType("GAME ON");
+            } else {
+                printRoundEnd(player, bot);
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     // the actual game running
     public void runPVPGameLoop() {
@@ -209,49 +455,49 @@ class GameRunner extends Main {
         while (playing) {
             // ask player 1 move
             while (true) {
-                System.out.println("[DEBUG] player2 grid before:");
-                player2.printGrid();
-                screenManager.askPlayerMoveScreen(player1.getPlayerName());
+                System.out.println("[DEBUG] guest grid before:");
+                guest.printGrid();
+                screenManager.askPlayerMoveScreen(captain.playerName);
                 consoleInput = InputManager.getNextLine();
 
-                if (player1.makeTurn(consoleInput, player2, screenManager)) break;
+                if (captain.makeTurn(consoleInput, guest, screenManager)) break;
             }
 
-            System.out.println("[DEBUG] player 2 grid after:");
-            player2.printGrid();
+            System.out.println("[DEBUG] guest grid after:");
+            guest.printGrid();
 
 
             while (true) {
-                System.out.println("[DEBUG] player1 grid before:");
-                player1.printGrid();
-                screenManager.askPlayerMoveScreen(player2.getPlayerName());
+                System.out.println("[DEBUG] captain grid before:");
+                captain.printGrid();
+                screenManager.askPlayerMoveScreen(guest.playerName);
                 consoleInput = InputManager.getNextLine();
 
-                if (player2.makeTurn(consoleInput, player1, screenManager)) break;
+                if (guest.makeTurn(consoleInput, captain, screenManager)) break;
             }
 
-            System.out.println("[DEBUG] player 1 grid after:");
-            player1.printGrid();
+            System.out.println("[DEBUG] guest grid after:");
+            guest.printGrid();
 
 
             System.out.println("after round " + round + " the state is");
-            System.out.println("player1: ");
-            player1.printGrid();
-            System.out.println("player 2: ");
-            player2.printGrid();
+            System.out.println("captain: ");
+            captain.printGrid();
+            System.out.println("guest: ");
+            guest.printGrid();
 
 
             // check win
             // check for loses*
 
-            boolean player1Lost = player1.hasLost();
-            boolean player2Lost = player2.hasLost();
+            boolean captainLost = captain.hasLost();
+            boolean guestLost = guest.hasLost();
 
-            if (!player1Lost && player2Lost) {
-                Helpers.slowType("PLAYER 1 AKA. " + player1.getPlayerName() + " HAS WON");
-            } else if (!player2Lost && player1Lost) {
-                Helpers.slowType("PLAYER 2 AKA. " + player2.getPlayerName() + " HAS WON");
-            } else if (player1Lost && player2Lost) {
+            if (!captainLost && guestLost) {
+                Helpers.slowType("PLAYER 1 AKA. " + captain.playerName + " HAS WON");
+            } else if (!guestLost && captainLost) {
+                Helpers.slowType("PLAYER 2 AKA. " + guest.playerName + " HAS WON");
+            } else if (captainLost && guestLost) {
                 Helpers.slowType("IT's A DRAW!!!");
             } else {
                 Helpers.slowType("GAME GOES ON");
@@ -260,119 +506,46 @@ class GameRunner extends Main {
         }
     }
 
+    public GameModes chooseGameMode() {
+        boolean choosingMode = true;
 
-    public void runPVEGameLoop() {
-        boolean playing = true;
-        boolean askPlayAgain = true;
+        while (choosingMode) {
+            ScreenManager.chooseGameModeScreen();
+            
+            consoleInput = InputManager.getLetter();
 
-        RandomBot simpleBot = new RandomBot();
+            switch (consoleInput.toLowerCase()) {
+                case "1":
+                case "easy":
+                    return GameModes.BotEasy;
 
-        while (playing) {
+                case "2":
+                case "medium":
+                    return GameModes.BotMedium;
 
-            Helpers.slowType("SCORE:\n BOT: " + simpleBot.getScore() + " | " + " PLAYER: " + player1.getScore());
+                case "3":
+                case "hard":
+                    return GameModes.BotHard;
 
-            runPvERound(player1, simpleBot);
+                case "4":
+                case "sniper":
+                case "duel":
+                    return GameModes.Sniper;
 
-            // ask if bro wanna play again
-            askPlayAgain = true;
-            while (askPlayAgain) {
-                Helpers.slowType("PLAY AGAIN? (y/n): ", false);
-                consoleInput = InputManager.getNextLine();
-
-                if (consoleInput.toLowerCase().equals("y")) {
-                    playing = true;
-                    askPlayAgain = false;
-                } else if (consoleInput.toLowerCase().equals("n")) {
-                    playing = false;
-                    askPlayAgain = false;
-                } else {
-                    Helpers.slowType("WE DIDN'T UNDERSTAND YOU CAPTAIN!");
-                    askPlayAgain = true;
-                }
+                case "0":
+                case "e":
+                case "exit":
+                    choosingMode = false;
+                    return null;
+            
+                default:
+                    Helpers.printInvalidInputMessage();
+                    break;
             }
+
         }
 
-
-
-    }
-
-    public void runPvERound(HumanPlayer player, Bot bot) {
-        Helpers.slowType("CONFIGURING MATCH");
-
-        bot.resetGrid();
-        player.resetGrid();
-        player.resetHitGrid();
-
-        Helpers.slowType("CONFIGURING BOT", false);
-        Helpers.slowType(".", false);
-
-        bot.generateShipsPositions();
-        Helpers.slowType(".", false);
-
-        Helpers.sleep(100);
-        Helpers.slowType(".");
-
-        Helpers.sleep(200);
-
-        Helpers.slowType("BOT READY!");
-
-        // run placing ships
-        player.addShips(consoleInput, screenManager);
-
-        Helpers.slowType("OUR FINAL WORK:");
-        player.printGrid();
-
-        Helpers.sleep(400);
-
-        boolean gameOn = true;
-        boolean askingMove = true;
-
-        while (gameOn) {
-            Helpers.slowType("OUR GRID:");
-            player.printGrid();
-
-            // player move
-            do {
-                bot.computeGrid();
-                if (bot.hasLost()) {
-                    Helpers.slowType("BOT 1 LOST, AS EXPECTED");
-                    gameOn = false;
-                    player.incrementScore();
-                    break;
-                }
-                Helpers.slowType("HIT GRID:");                    
-                player.printHitList();
-
-                askingMove = true;
-                while (askingMove) {
-                    Helpers.slowType("OUR MOVE?: ", false);
-                    consoleInput = InputManager.getNextLine();
-                    
-                    if (!player.validTurn(consoleInput, bot)) {
-                        Helpers.slowType("CAPTAIN THIS TURN IS INVALID!");
-                    } else {
-                        askingMove = false;
-                    }
-                }
-                
-            } while (!player.makeTurn(consoleInput, bot, screenManager));
-
-            // we do not let bot make another turn if he already lost
-            if (!gameOn) break;
-
-            // bot move
-            do {
-                player.computeGrid();
-                if (player.hasLost()) {
-                    Helpers.slowType("CAPTAIN HOW COULD YOU LOSE?");
-                    bot.incrementScore();
-                    gameOn = false;
-                    break;
-                }
-            } while (!bot.makeTurn(consoleInput, player, screenManager));
-
-            Helpers.slowType("GAME ON");
-        }
+        return null;
     }
 
     // the function that handles ship placing interactions
@@ -382,40 +555,61 @@ class GameRunner extends Main {
         Helpers.slowType("PLAYER 1 WHAT IS YOUR NAME?");
         consoleInput = InputManager.getNextLine();
 
-        player1.setPlayerName(consoleInput);
+        captain.playerName = consoleInput;
 
-        player1.addShips(consoleInput, screenManager);
+        captain.addShips(consoleInput, screenManager);
 
-        Helpers.slowType("\n\nAFTER ADDING SHIPS THE GRID FOR PLAYER1:");
-        player1.printGrid();
+        Helpers.slowType("\n\nAFTER ADDING SHIPS THE GRID FOR captain:");
+        captain.printGrid();
         
         System.out.println();
         Helpers.slowType("PLAYER 2 WHAT IS YOUR NAME?");
         consoleInput = InputManager.getNextLine();
 
-        player2.setPlayerName(consoleInput);
+        guest.playerName = consoleInput;
 
-        Helpers.slowType("Player2 place the ships");
-        player2.addShips(consoleInput, screenManager);
+        Helpers.slowType("Guest place the ships");
+        guest.addShips(consoleInput, screenManager);
 
-        Helpers.slowType("\n\nAFTER ADDING SHIPS THE GRID FOR PLAYER2:");
-        player2.printGrid();
+        Helpers.slowType("\n\nAFTER ADDING SHIPS THE GRID FOR GUEST:");
+        guest.printGrid();
 
-        Helpers.slowType("PLAYER1: ");
-        player1.printGrid();
+        Helpers.slowType("captain: ");
+        captain.printGrid();
 
         Helpers.slowType("PLAYER2: ");
-        player2.printGrid();
+        guest.printGrid();
     }
 
+
+    public void printRoundEnd(Player player1, Player player2) {
+        Helpers.slowType("THE BATTLEFIELD IN THE END:");
+        Helpers.sleep(500);
+        Helpers.slowType(player1.playerName + "'S GRID");
+        player1.printGrid();
+        Helpers.sleep(1000);
+        Helpers.slowType(player2.playerName + "'S GRID");
+        player2.printGrid();
+        ScreenManager.printScore(player1.score, player2.score, player1.playerName, player2.playerName, "o");
+        
+        Helpers.sleep(5000);
+        Helpers.slowType("GAME OVER.");
+        Helpers.sleep(2000);
+    }
 }
 
 
 // enums 
-enum GameMode {
+enum GameType {
     Cancel,
     RandomBot,
     LocalPvP
+}
+enum GameModes {
+    BotEasy,
+    BotMedium,
+    BotHard,
+    Sniper,
 }
 enum MainMenuOptions {
     Battle,
@@ -423,24 +617,50 @@ enum MainMenuOptions {
     Donate,
     Exit
 }
+enum AddShipResult {
+    ShipAdded, DeleteLastShip, Cancel, Clear
+}
 
 
 // 67
 class GameSettings {
+    public static final String GAME_NAME = "MORSKOY boi";
+
+    public static final String[] DEFAULT_NAMES = {
+        "Blackskin Jhon",
+        "Calicu Jack",
+        "Bartholomew",
+        "Edward Downie",
+        "Alchemik Edgar",
+        "One-eyed Weiner",
+        "Sir Mohamed Allah Abdul",
+        "Timmy tough knuckles",
+        "Jhonnatan the dihpressed",
+    };
+
+
     // these static fields should be easily modifyible in settings
     public static String shipCharacter = Colors.SHIP_COLOR +  '#' + Colors.RESET;
     public static String shipCharacterInvalid = Colors.YELLOW + '#' + Colors.RESET;
+    public static String shipCharacterInvalidBoard = Colors.MAGENTA + '#' + Colors.RESET;
+    public static String shipDestroyedCharacter = Colors.MAGENTA + '#' + Colors.RESET;
     public static String waterCharacter = Colors.WATER_COLOR + '.' + Colors.RESET;
     public static String hitCharacter = Colors.HIT_COLOR + 'X' + Colors.RESET;
     public static String missCharacter = Colors.MISS_COLOR + 'o' + Colors.RESET;
+    public static String spaceAroundDestroyedShipCharacter = Colors.CYAN + 'o' + Colors.RESET;
 
     public static String chooseShipPointer = "^";
 
-    // means a grid 5x5
-    public static int gridSize = 5;
+    public static String prompt = "> ";
 
-    public static String STD_SPACE = "\t\t";
-    public static String STD_SMALL_SPACE = "\t";
+    public static boolean sniperMode = false;
+
+    // means a grid 5x5
+    public static int gridSize = 7;
+
+    private static int STD_SPACE_COUNT = 4;
+    public static String STD_SPACE = " ".repeat(STD_SPACE_COUNT);
+    public static String STD_SMALL_SPACE = " ".repeat(STD_SPACE_COUNT/2);
 
     // first is ship size, second is quantity of that ship
     private static List<Pair<Integer, Integer>> defaultShipsList = List.of(
@@ -461,9 +681,15 @@ class GameSettings {
     public static List<Pair<Integer, Integer>> copyOfShips() {
         List<Pair<Integer, Integer>> copy = new ArrayList<>();
 
-        int shipsForGridSize = gridSize > 7 ? defaultShipsList.size() : gridSize - 2;
+        if (sniperMode) {
+            copy.add(new Pair<>(1, 1));
+            return copy;
+        }
 
-        int shipQuantityReglator = gridSize > 6 ? 0 : 2;
+        //                                7
+        int shipsForGridSize = gridSize > 6 ? defaultShipsList.size() : gridSize - 2;
+
+        int shipQuantityReglator = gridSize > 7 ? 0 : 2;
 
         for (int i = 0; i < shipsForGridSize; i++) {
             int shipQuantity = defaultShipsList.get(i).second - shipQuantityReglator;
@@ -513,8 +739,11 @@ class Colors {
     public static final String WATER_BACKGROUND_COLOR = BLUE_BACKGROUND;
     public static final String SHIP_BACKGROUND_COLOR = GREEN_BACKGROUND;
     public static final String SHIP_INVALID_BACKGROUND_COLOR = YELLOW_BACKGROUND;
+    public static final String SHIP_INVALID_BOARD_BACKGROUND_COLOR = MAGENTA_BACKGROUND;
     public static final String HIT_BACKGROUND_COLOR = RED_BACKGROUND;
     public static final String MISS_BACKGROUND_COLOR = YELLOW_BACKGROUND;
+    public static final String SHIP_DESTROYED_BACKGROUND_COLOR = MAGENTA_BACKGROUND;
+    public static final String SPACE_AROUND_DESTROYED_SHIP_BACKGROUND_COLOR = CYAN_BACKGROUND;
     
 
 }
@@ -535,12 +764,16 @@ class Coordonates {
         this.y = y;
     }
 
-    public int humanizeX() {
-        return x+1;
+    public char humanizeX() {
+        return Helpers.translateNumberToLetter(x);
     }
 
     public int humanizeY() {
-        return Helpers.translateNumberToLetter(y);
+        return y+1;
+    }
+
+    public String toString() {
+        return humanizeX() + "" + humanizeY();
     }
 }
 
@@ -561,19 +794,24 @@ class Player {
     protected List<BoardObject> boardObjects = new ArrayList<>();
 
     protected List<List<String>> grid = new ArrayList<>();
+    
+    // the starting coordonates and the direction of a valid ship 
+    List<Pair<Coordonates, Integer>> validShipPositions;
 
     protected String playerName;
 
-    protected int score;
+    protected int score = 0;
+
+    protected int hitCount = 0;
 
 
     // grid related settings
     
     // each unit means a space
-    protected int cellHorizontalPaddingValue;
+    protected int cellHorizontalPaddingValue = 4;
     
     // each unit means a newline
-    protected int cellVerticalPaddingValue;
+    protected int cellVerticalPaddingValue = 1;
 
     protected HashMap<Integer, Character> gridLegendLetters = new HashMap<>(Map.of(
         1, 'A',
@@ -590,9 +828,8 @@ class Player {
 
     Player() {
         this.score = 0;
-
-        this.cellHorizontalPaddingValue = 4;
-        this.cellVerticalPaddingValue = 1;
+        this.hitCount = 0;
+        this.playerName = "Player";
     }
 
     public void incrementScore() {
@@ -603,16 +840,20 @@ class Player {
         return score;
     }
 
-    public void setPlayerName(String newName) {
-        playerName = newName;
+    public int getHitCount() {
+        return hitCount;
     }
 
-    public String getPlayerName() {
-        return playerName;
+    public void incrementHitCount() {
+        hitCount++;
     }
 
     public void computeGrid() {
-        grid = fillGrid();
+        grid = fillGrid(this.boardObjects);
+    }
+
+    public List<List<String>> computeGrid(List<BoardObject> differentBoardObjects) {
+        return fillGrid(differentBoardObjects);
     }
 
     // creation/initial creation of an empty grid
@@ -630,17 +871,15 @@ class Player {
     }
 
     // fills the grid with characters
-    public List<List<String>> fillGrid() {
-        List<List<String>> grid = new ArrayList<>();
-
-        grid = fillEmptyGrid();
+    public List<List<String>> fillGrid(List<BoardObject> objectsToPrint) {
+        List<List<String>> grid = fillEmptyGrid();
 
         // render board objects
-        if (boardObjects.size() == 0) {
+        if (objectsToPrint.size() == 0) {
             // skip we do not add anything
         } else {
             // render ships first
-            for (BoardObject object : boardObjects) {
+            for (BoardObject object : objectsToPrint) {
                 if (object instanceof Ship) {
                     if (object.direction == 1) {
                         int tempSize = object.size;
@@ -659,9 +898,84 @@ class Player {
             }
 
             // render hits and misses
-            for (BoardObject object : boardObjects) {
+            for (BoardObject object : objectsToPrint) {
                 if (object instanceof Miss || object instanceof Hit) {
                     grid.get(object.coordonates.y).set(object.coordonates.x, object.graphic);
+                }
+            }
+
+            // on top of all that render the destroyed ships and mark the area around them
+            for (BoardObject object : objectsToPrint) {
+                if (object instanceof Ship && object.destroyed) {
+                    int x = object.coordonates.x;
+                    int y = object.coordonates.y;
+
+
+                    // set the squares around as invalid stuff
+                    for (int i = 0; i < object.size; i++) {
+                        grid.get(y).set(x, object.graphic);
+
+                        // up
+                        if (
+                            y > 0 &&
+                            grid.get(y-1).get(x).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y-1).set(x, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+                        // down
+                        if (
+                            y < GameSettings.gridSize-1 &&
+                            grid.get(y+1).get(x).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y+1).set(x, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+                        // left
+                        if (
+                            x > 0 &&
+                            grid.get(y).get(x-1).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y).set(x-1, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+                        // right
+                        if (
+                            x < GameSettings.gridSize-1 &&
+                            grid.get(y).get(x+1).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y).set(x+1, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+                        // diagonals left up
+                        if (
+                            x > 0 && y > 0 &&
+                            grid.get(y-1).get(x-1).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y-1).set(x-1, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+                        // diagonals right up
+                        if (
+                            x < GameSettings.gridSize-1 && y > 0 &&
+                            grid.get(y-1).get(x+1).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y-1).set(x+1, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+                        // diagonals left down
+                        if (
+                            x > 0 && y < GameSettings.gridSize-1 &&
+                            grid.get(y+1).get(x-1).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y+1).set(x-1, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+                        // diagonals right down
+                        if (
+                            x < GameSettings.gridSize-1 && y < GameSettings.gridSize-1 &&
+                            grid.get(y+1).get(x+1).equals(GameSettings.waterCharacter)
+                        ) {
+                            grid.get(y+1).set(x+1, GameSettings.spaceAroundDestroyedShipCharacter);
+                        }
+
+                        // increment pointers
+                        x += (object.direction == 1) ? 0 : 1;
+                        y += (object.direction == 1) ? 1 : 0;
+                    }
                 }
             }
         }
@@ -697,7 +1011,9 @@ class Player {
             return false;
         } else if (
             enemy.grid.get(y).get(x).equals(GameSettings.missCharacter) || 
-            enemy.grid.get(y).get(x).equals(GameSettings.hitCharacter)
+            enemy.grid.get(y).get(x).equals(GameSettings.hitCharacter) ||
+            enemy.grid.get(y).get(x).equals(GameSettings.shipDestroyedCharacter) ||
+            enemy.grid.get(y).get(x).equals(GameSettings.spaceAroundDestroyedShipCharacter) 
         ) {
             return false;
         }
@@ -800,8 +1116,19 @@ class Player {
         return false;
     }
 
+    // returns the size of the largest ship
+    public int getLargestShip(List<Pair<Integer, Integer>> ships) {
+        int biggestShip = 0;
+        for (Pair<Integer, Integer> shipData : ships) {
+            if (shipData.second != 0) {
+                biggestShip = Math.max(biggestShip, shipData.first);
+            }
+        }
+        return biggestShip;
+    }
+
     // checks if starting from xy going in dir for size cells everything is fine
-    public boolean spaceFree(int x, int y, int size, int dir) {
+    public boolean spaceFree(int x, int y, int size, int dir, List<List<String>> currentGrid) {
         // we've worked everything until now, no need to do anything else
         // the base case for our recursive function
         if (size == 0) {
@@ -809,47 +1136,106 @@ class Player {
         }
 
         // check current cell
-        if (grid.get(y).get(x).equals(GameSettings.shipCharacter)) {
+        if (
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
 
         // direct neighbors check
-        if (y > 0 && grid.get(y-1).get(x).equals(GameSettings.shipCharacter)) {
+        if (
+            y > 0 && currentGrid.get(y-1).get(x).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
-        if (x < GameSettings.gridSize-1 && grid.get(y).get(x+1).equals(GameSettings.shipCharacter)) {
+        if (
+            x < GameSettings.gridSize-1 && currentGrid.get(y).get(x+1).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
-        if (y < GameSettings.gridSize-1 && grid.get(y+1).get(x).equals(GameSettings.shipCharacter)) {
+        if (
+            y < GameSettings.gridSize-1 && currentGrid.get(y+1).get(x).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
-        if (x > 0 && grid.get(y).get(x-1).equals(GameSettings.shipCharacter)) {
+        if (
+            x > 0 && currentGrid.get(y).get(x-1).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
 
         // diagonal check
-        if (y > 0 && x > 0 && grid.get(y-1).get(x-1).equals(GameSettings.shipCharacter)) {
+        if (
+            y > 0 && x > 0 && currentGrid.get(y-1).get(x-1).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
-        if (y > 0 && x < GameSettings.gridSize-1 && grid.get(y-1).get(x+1).equals(GameSettings.shipCharacter)) {
+        if (
+            y > 0 && x < GameSettings.gridSize-1 && currentGrid.get(y-1).get(x+1).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
-        if (y < GameSettings.gridSize-1 && x > 0 && grid.get(y+1).get(x-1).equals(GameSettings.shipCharacter)) {
+        if (
+            y < GameSettings.gridSize-1 && x > 0 && currentGrid.get(y+1).get(x-1).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
-        if (y < GameSettings.gridSize-1 && x < GameSettings.gridSize-1 && grid.get(y+1).get(x+1).equals(GameSettings.shipCharacter)) {
+        if (
+            y < GameSettings.gridSize-1 && x < GameSettings.gridSize-1 && currentGrid.get(y+1).get(x+1).equals(GameSettings.shipCharacter) ||
+            currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
+        ) {
             return false;
         }
 
         // shoot a ray for the rest of ship's size
         if (dir == 1) {
-            return spaceFree(x, y+1, size-1, dir);
+            return spaceFree(x, y+1, size-1, dir, currentGrid);
         } else if (dir == 2) {
-            return spaceFree(x+1, y, size-1, dir);
+            return spaceFree(x+1, y, size-1, dir, currentGrid);
         } else {
-            System.out.println("[ERROR] we've somehow got other direction in spaceFree in Bot");
+            System.out.println("[ERROR] we've somehow got other direction in spaceFree function");
+            // though thats kinda impossible
             return false;
         }
+    }
+
+    // computes all valid positions for given ship's Size
+    public List<Pair<Coordonates, Integer>> computeValidPositions(int shipSize, List<List<String>> currentGrid) {
+        List<Pair<Coordonates, Integer>> validCoords = new ArrayList<>();
+
+        for (int y = 0; y < currentGrid.size(); y++) {
+            for (int x = 0; x < currentGrid.get(y).size(); x++) {
+
+                if (currentGrid.get(y).get(x).equals(GameSettings.waterCharacter)) {
+
+                    if (y + shipSize <= GameSettings.gridSize) {
+                        // check if theres noone on the road and nearby
+                        if (spaceFree(x, y, shipSize, 1, currentGrid)) {
+                            // add a valid vertical(1) position 
+                            validCoords.add(new Pair(new Coordonates(x, y), 1));
+                        }
+                    }
+
+                    if (x + shipSize <= GameSettings.gridSize) {
+                        if (spaceFree(x, y, shipSize, 2, currentGrid)) {
+                            // add valid horizontal(2) position
+                            validCoords.add(new Pair(new Coordonates(x, y), 2));
+                        }
+
+                    }
+                }
+            }
+        }
+
+        return validCoords;
     }
 
 
@@ -939,6 +1325,21 @@ class Player {
                     paddingTopBottom = paddingTopBottom + Colors.SHIP_INVALID_BACKGROUND_COLOR + 
                     horizontalPadding + horizontalPadding + " " + Colors.RESET;
                 }
+                // it's invalid board ship color invalid ship
+                else if (gridToPrint.get(i).get(j).equals(GameSettings.shipCharacterInvalidBoard)) {
+                    paddingTopBottom = paddingTopBottom + Colors.SHIP_INVALID_BOARD_BACKGROUND_COLOR + 
+                    horizontalPadding + horizontalPadding + " " + Colors.RESET;
+                }
+                // it's ship destroyed color destroyed
+                else if (gridToPrint.get(i).get(j).equals(GameSettings.shipDestroyedCharacter)) {
+                    paddingTopBottom = paddingTopBottom + Colors.SHIP_DESTROYED_BACKGROUND_COLOR + 
+                    horizontalPadding + horizontalPadding + " " + Colors.RESET;
+                }
+                // it's space around destroyed ship color space around destroyed
+                else if (gridToPrint.get(i).get(j).equals(GameSettings.spaceAroundDestroyedShipCharacter)) {
+                    paddingTopBottom = paddingTopBottom + Colors.SPACE_AROUND_DESTROYED_SHIP_BACKGROUND_COLOR + 
+                    horizontalPadding + horizontalPadding + " " + Colors.RESET;
+                }
                 // it's a miss color miss
                 else if (gridToPrint.get(i).get(j).equals(GameSettings.missCharacter)) {
                     paddingTopBottom = paddingTopBottom + Colors.MISS_BACKGROUND_COLOR + 
@@ -959,7 +1360,10 @@ class Player {
             }
 
             // print cell data
-            System.out.print(stdSpace + (i+1) + stdSpace + "\b" + gridVerticalLineBorder);
+            System.out.print(stdSpace);
+            if (i+1 > 9) System.out.print("\b");
+            System.out.print((i+1) + stdSpace + "\b" + gridVerticalLineBorder);
+
             for (int j = 0; j < GameSettings.gridSize; j++) {
                 // water
                 if (gridToPrint.get(i).get(j).equals(GameSettings.waterCharacter)) {
@@ -983,6 +1387,30 @@ class Player {
                         Colors.SHIP_INVALID_BACKGROUND_COLOR + horizontalPadding + 
                         gridToPrint.get(i).get(j) + 
                         Colors.SHIP_INVALID_BACKGROUND_COLOR + horizontalPadding + Colors.RESET
+                    );
+                }
+                // invalid board
+                else if (gridToPrint.get(i).get(j).equals(GameSettings.shipCharacterInvalidBoard)) {
+                    System.out.print(
+                        Colors.SHIP_INVALID_BOARD_BACKGROUND_COLOR + horizontalPadding + 
+                        gridToPrint.get(i).get(j) + 
+                        Colors.SHIP_INVALID_BOARD_BACKGROUND_COLOR + horizontalPadding + Colors.RESET
+                    );
+                }
+                // ship destroyed
+                else if (gridToPrint.get(i).get(j).equals(GameSettings.shipDestroyedCharacter)) {
+                    System.out.print(
+                        Colors.SHIP_DESTROYED_BACKGROUND_COLOR + horizontalPadding + 
+                        gridToPrint.get(i).get(j) + 
+                        Colors.SHIP_DESTROYED_BACKGROUND_COLOR + horizontalPadding + Colors.RESET
+                    );
+                }
+                // ship destroyed space around
+                else if (gridToPrint.get(i).get(j).equals(GameSettings.spaceAroundDestroyedShipCharacter)) {
+                    System.out.print(
+                        Colors.SPACE_AROUND_DESTROYED_SHIP_BACKGROUND_COLOR + horizontalPadding + 
+                        gridToPrint.get(i).get(j) + 
+                        Colors.SPACE_AROUND_DESTROYED_SHIP_BACKGROUND_COLOR + horizontalPadding + Colors.RESET
                     );
                 }
                 // miss
@@ -1028,11 +1456,133 @@ class Player {
         System.out.println(borderBottomEnd);
     }
 
+        // generates ships placed randomly
+    public void generateShipsPositions() {
+        // initial grid fill
+        computeGrid();
+
+        List<Pair<Integer, Integer>> shipsToPlace = GameSettings.copyOfShips();
+        int largestShip = 0;
+        // the temp variable for the ship placed, in first has the coords in second has the ship's size
+        Pair<Coordonates, Integer> randomShipPlacement;
+
+        while (hasShipsToPlace(shipsToPlace)) {
+
+/*             System.out.println("Ships to place:");
+            for (Pair<Integer,Integer> pair : shipsToPlace) {
+                System.out.println(pair.first + " " + pair.second);
+            }
+            System.out.println('\n'); */
+
+            // choose the largest ship 
+            largestShip = getLargestShip(shipsToPlace);
+
+            // compute it's possible valid positions
+            validShipPositions = computeValidPositions(largestShip, this.grid);
+
+            // choose random position
+            try {
+                randomShipPlacement = validShipPositions.get(Helpers.generateRandomInt(0, validShipPositions.size()-1));
+            } catch (Exception exception) {
+                // fuck, it generated an impossible grid
+
+                // delete all ships
+                boardObjects.clear();
+
+                // renew the list of ships to place
+                shipsToPlace = GameSettings.copyOfShips();
+
+                // register the deleted ship on our board
+                computeGrid();
+
+                // hope for the best
+                continue;
+            }
+
+            // place ship
+            registerShip(largestShip, randomShipPlacement.first, randomShipPlacement.second);
+
+            // mark ship as placed (remove ship from list of ships to place)
+            for (int i = 0; i < shipsToPlace.size(); i++) {
+                Pair<Integer, Integer> shipData = shipsToPlace.get(i);
+                if (shipData.first == largestShip && shipData.second > 0) {
+                    shipsToPlace.set(i, new Pair<>(shipData.first, shipData.second - 1));
+                    break;
+                }
+            }
+
+            // refill the grid so the program will see ships placed
+            computeGrid();
+        }
+    }
+
+    /**
+     * marks ship ALREADY DESTROYED at shipCoordonates as destroyed
+     * @param shipCoordonates the last hit
+     * @param enemyGrid we need the grid to search for ship and stuff
+     * @param enemyBoardObjects - the enemy's board objects
+     */
+    public void markShipAsDestroyed(Coordonates shipCoordonates, List<List<String>> enemyGrid, List<BoardObject> enemyBoardObjects) {
+        Ship ship = getShipByCoordonates(shipCoordonates, enemyGrid, enemyBoardObjects);
+        ship.setShipAsDestroyed();
+    }
+
+    /**
+     * gets one of ship's cell's coordonates, finds the head, finds the object by coords returns the object
+     * @param shipCoordonates - one of SHIPS's coordonates
+     * @param gridList - the grid, used to find head
+     * @param boardObjects - the board objects, used to find object
+     * @return returns a ship object or null if not found
+     */
+    public Ship getShipByCoordonates(Coordonates shipCoordonates, List<List<String>> gridList, List<BoardObject> boardObjects) {
+        // first search for ship's head
+        int currX = shipCoordonates.x;
+        int currY = shipCoordonates.y;
+
+        // up
+        while (true) {
+            if (currY > 0) {
+                if (gridList.get(currY-1).get(currX).equals(GameSettings.hitCharacter)) {
+                    currY--;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+
+        // left
+        while (true) {
+            if (currX > 0) {
+                if (gridList.get(currY).get(currX-1).equals(GameSettings.hitCharacter)) {
+                    currX--;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // then just search for that ship using it's coordonates
+        for (BoardObject boardObject : boardObjects) {
+            if (boardObject instanceof Ship && boardObject.coordonates.x == currX && boardObject.coordonates.y == currY) {
+                return (Ship) boardObject;
+            }
+        }
+
+        return null;
+    }
 }
 
 class HumanPlayer extends Player {
+    Ship lastPlacedShip = null;
 
-    public List<List<String>> hitList = new ArrayList<>();
+    public List<BoardObject> hitList = new ArrayList<>();
+
+    protected List<List<String>> hitGrid;
 
     // form the hitlist in constructor
     HumanPlayer() {
@@ -1040,18 +1590,16 @@ class HumanPlayer extends Player {
     }
 
     public void printHitList() {
-        printGrid(hitList);
+
+        hitGrid = computeGrid(hitList);
+        printGrid(hitGrid);
     }
 
 
+    @Deprecated
     // really creates it empty, initializes it
     public void fillHitGrid() {
-        for (int i = 0; i < GameSettings.gridSize; i++) {
-            hitList.add(new ArrayList<>());
-            for (int j = 0; j < GameSettings.gridSize; j++) {
-                hitList.get(i).add(GameSettings.waterCharacter);
-            }
-        }
+        
     }
 
     // resets to default a dirty grid
@@ -1063,49 +1611,62 @@ class HumanPlayer extends Player {
     // returns true if we should pass on the turn
     @Override
     public boolean makeTurn(String turn, Player enemy, ScreenManager screenManager) {
-        int x = Helpers.translateLetterToNumber(turn.charAt(0)) - 1;
-        int y = turn.charAt(1) - '0' - 1;
+        Coordonates turnCoordonates = new Coordonates(turn);
 
-        if (!validTurn(x, y, enemy)) {
-            Helpers.slowType("CAPTAIN, THIS TURN IS INVALID!");
-            return false;
-        }
+        ScreenManager.printDramaticPauseBeforeMove();
 
         // hit
-        if (enemy.grid.get(y).get(x).equals(GameSettings.shipCharacter)) {
-            Helpers.slowType("CAPTAIN WE HIT!");
+        if (enemy.grid.get(turnCoordonates.y).get(turnCoordonates.x).equals(GameSettings.shipCharacter)) {
+            ScreenManager.printHitMessage();
+            Helpers.sleep(1000);
 
             enemy.registerHit(new Hit(turn));
 
             enemy.computeGrid();
 
-            hitList.get(y).set(x, GameSettings.hitCharacter);
+            hitList.add(new Hit(turn));
+
 
             // say whether the ship is destroyed or not
-            // manually create empty list
-            List<List<Integer>> visited = new ArrayList<>();
-            for(int i = 0; i < GameSettings.gridSize; i++) {
-                visited.add(new ArrayList<>());
-                for (int j = 0; j < GameSettings.gridSize; j++) {
-                    visited.get(i).add(0);
-                }
+            List<List<Integer>> visited = Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize);
+
+            if (shipDestroyed(turnCoordonates.x, turnCoordonates.y, enemy.grid, visited)) {
+                ScreenManager.printShipDestroyedMessage();
+                Helpers.sleep(1000);
+                Helpers.slowType("DO NOT OPEN SHAMPAGNE YET, ENEMY STIL HAS SHIPS OUT THERE");
+                System.out.println();
+                Helpers.sleep(500);
+
+                // mark ship as destroyed in enemy's grid
+                markShipAsDestroyed(turnCoordonates, enemy.grid, enemy.boardObjects);
+                
+                // mark it as destroyed in hitlist
+                Ship ship = getShipByCoordonates(turnCoordonates, enemy.grid, enemy.boardObjects);
+                int shipSize = ship.size;
+                int x = ship.coordonates.x;
+                int y = ship.coordonates.y;
+
+                Ship destroyedShip = new Ship(shipSize, new Coordonates(x, y), ship.direction);
+                destroyedShip.setShipAsDestroyed();
+                hitList.add(destroyedShip);
+
+            } else {
+                Helpers.slowType("CAPTAIN DO NOT RELAX SHIP NOT DESTROYED YET!");
+                Helpers.sleep(500);
+                System.out.println();
             }
 
-            if (shipDestroyed(x, y, enemy.grid, visited)) {
-                screenManager.printShipDestroyedScreen();
-            } else {
-                System.out.println("Ship not destroyed");
-            }
+            incrementHitCount();
 
             return false;
 
         // miss
-        } else if (enemy.grid.get(y).get(x).equals(GameSettings.waterCharacter)) {
-            Helpers.slowType("CAPTAIN WE MISSED");
+        } else if (enemy.grid.get(turnCoordonates.y).get(turnCoordonates.x).equals(GameSettings.waterCharacter)) {
+            ScreenManager.printMissMessage();
 
             enemy.registerMiss(new Miss(turn));
 
-            hitList.get(y).set(x, GameSettings.missCharacter);
+            hitList.add(new Miss(turn));
         }
 
         return true;
@@ -1113,43 +1674,55 @@ class HumanPlayer extends Player {
 
 
     // renders the ships we're trying to add to screen
-    public boolean fillShip(List<List<String>> tempGrid, List<BoardObject> tempBoardObjects) {
+    public boolean fillShip(List<List<String>> tempGrid, List<BoardObject> tempBoardObjects, boolean boardValid) {
         // Get the last added ship
         BoardObject currentShip = tempBoardObjects.get(tempBoardObjects.size() - 1);
+
+        int currentShipSize = currentShip.size;
+        int currentShipY = currentShip.coordonates.y;
+        int currentShipX = currentShip.coordonates.x;
 
         // check if if it's position is valid
         // if not we render it in other color
         String shipCharacter = "";
-        boolean valid = spaceFree(currentShip.coordonates.x, currentShip.coordonates.y, currentShip.size, currentShip.direction);
+        boolean valid = spaceFree(currentShip.coordonates.x, currentShip.coordonates.y, currentShip.size, currentShip.direction, tempGrid);
         
-        if (valid) {
+        if (!valid) {
+            shipCharacter = GameSettings.shipCharacterInvalid;
+        } else if (!boardValid) {
+            shipCharacter = GameSettings.shipCharacterInvalidBoard;
+        } else if (valid) {
             shipCharacter = GameSettings.shipCharacter;
         } else {
-            shipCharacter = GameSettings.shipCharacterInvalid;
+            System.out.println("GOT A DIFFERENT VALUE IN RENDER SHIPS");
         }
 
-        while (currentShip.size > 0) {
+        while (currentShipSize > 0) {
             // render vertically
             if (currentShip.direction == 1) {
-                tempGrid.get(currentShip.coordonates.y).set(currentShip.coordonates.x, shipCharacter);
-                currentShip.coordonates.y++;
+                tempGrid.get(currentShipY).set(currentShipX, shipCharacter);
+                currentShipY++;
             // render horizontally
             } else if (currentShip.direction == 2) {
-                tempGrid.get(currentShip.coordonates.y).set(currentShip.coordonates.x, shipCharacter);
-                currentShip.coordonates.x++;
+                tempGrid.get(currentShipY).set(currentShipX, shipCharacter);
+                currentShipX++;
             }
-            currentShip.size--;
+            currentShipSize--;
         }
 
         return valid;
     }
 
-
-    public void addShip(int size) {
+    // runs the wasd rotate all on board with the place ship stuff
+    // returns wether we actually placed the ship or not
+    public AddShipResult addShip(int size, List<Pair<Integer, Integer>> shipsToPlace) {
         List<List<String>> tempGrid = new ArrayList<>();
         List<BoardObject> tempBoardObjects = new ArrayList<>();
+        
 
         boolean shipPositionValid = false;
+        boolean boardValid = true;
+        boolean lastShip = true;
 
 
         // represent the ships positions as valid indexes
@@ -1158,30 +1731,49 @@ class HumanPlayer extends Player {
         int shipDir = 1;
 
         while (true) {
+            // idk, i did it at 4 am, there is some logic to it, like we draw to check, then we redraw as it should look like
+            // but i just wanna sleep and make it work
+
+            int shipTotalQuantity = 0;
+            for (Pair<Integer, Integer> shipDataPair : shipsToPlace) {
+                shipTotalQuantity += shipDataPair.second;
+            }
+            lastShip = shipTotalQuantity == 1;
+
             // add a ship with updated coords and dir
             tempBoardObjects.add(new BoardObject(new Coordonates(shipX, shipY), size, shipDir));
 
             // first make an empty grid
-            tempGrid = fillGrid();
+            tempGrid = fillGrid(boardObjects);
+            
+            // then we fill a temporary ship 
+            shipPositionValid = fillShip(tempGrid, tempBoardObjects, true);
+            // check all valid positions
+            boardValid = (0 != computeValidPositions(getLargestShip(shipsToPlace), tempGrid).size());
 
-            // them fill with our poopoo
-            shipPositionValid = fillShip(tempGrid, tempBoardObjects);
+            // skip entirely if it's last ship
+            if (lastShip) {
+                boardValid = true;
+            }
 
+            // then we refill with the actual color of the ship
+            tempGrid = fillGrid(boardObjects);
+            fillShip(tempGrid, tempBoardObjects, boardValid);
+
+                
             // then print the state of the grid
             printGrid(tempGrid);
+
 
             System.out.println();
             System.out.println();
             // legend
             System.out.println(
                 """
-                    [A] for moving left 
-                    [D] for moving right 
-                    [W] for moving up 
-                    [S] for moving down 
-                    [R] for rotating 
-                    [P] for placing the ship
-                    [C] to cancel
+                    [A] for moving left | [D] for moving right      |
+                    [W] for moving up   | [S] for moving down       |
+                    [R] for rotating    | [P] for placing the ship  | 
+                    [C] to cancel       | [G] clear the board       |[Z] to undo the placement of last ship
                 """
             );
 
@@ -1189,6 +1781,14 @@ class HumanPlayer extends Player {
                 System.out.println("CAPTAIN THIS POSITION IS INVALID, IT TOUCHES OR IS IN PLACE OF ANOTHER SHIP!");
                 System.out.println();
                 System.out.println();            
+            }
+
+            if (!boardValid) {
+                System.out.println("CAPTAIN THIS POSITION IS INVALID, PLACING A SHIP HERE WOULD RESULT IN A BOARD THAT CANNOT BE FILLED!");
+            }
+
+            if (boardValid && shipPositionValid) {
+                System.out.println("THIS IS A GOOD SPOT CAPTAIN");
             }
 
             String inputStr = InputManager.getLetter();
@@ -1251,18 +1851,62 @@ class HumanPlayer extends Player {
 
                 case "p":
                     // place the ship and update the quantity
-                    System.out.println("ADD PLACE SHIP STUFF");
+
+
+                    // first check if if we place this ship we can place others
+                    if (!boardValid) {
+                        Helpers.slowType("CAPTAIN!");
+                        Helpers.sleep(500);
+                        Helpers.slowType("AS I SAID, PLACING THIS SHIP WOULD RESULT IN A BOARD THAT CANNOT BE FILLED!");
+                        Helpers.sleep(500);
+                        break;
+                    }
+
+                    if (!shipPositionValid) {
+                        Helpers.slowType("CAPTAIN THIS IS AN INVALID SHIP POSITION");
+                        Helpers.sleep(500);
+                        break;
+                    }
 
                     // we register ship in our playing grid
                     registerShip(size, new Coordonates(shipX, shipY), shipDir);
 
+                    lastPlacedShip = new Ship(size, new Coordonates(shipX, shipY), shipDir);
+
                     // then we quit
-                    return;
+                    return AddShipResult.ShipAdded;
+
+
+                case "z":
+
+                    if (lastPlacedShip == null) {
+                        Helpers.slowType("CAPTAIN,");
+                        Helpers.sleep(300);
+                        Helpers.slowType("WE HAVEN'T PLACED ANY SHIPS YET!");
+                        Helpers.slowType("OR I DON'T WANT YOU TO DELETE A SHIP");
+                        break;
+                    }
+
+                    boardObjects.remove(boardObjects.size()-1);
+                    for (int i = 0; i < shipsToPlace.size(); i++) {
+                        if (shipsToPlace.get(i).first == lastPlacedShip.size) {
+                            shipsToPlace.get(i).second++;
+                            lastPlacedShip = null;
+                            break;
+                        }
+                    }
+                    return AddShipResult.DeleteLastShip;
 
                 case "c":
-                    // cancel the ship placement, we just return without registering the ship, and it will be like we never added it
+                    // cancel the ship placement, we just return without registering the ship, 
+                    // and it will be like we never added it
                     // autocomplete bruh...
-                    return;
+                    return AddShipResult.Cancel;
+
+                case "g":
+                    boardObjects.clear();
+                    shipsToPlace = GameSettings.copyOfShips();
+                    return AddShipResult.Clear;
                 
                 default:
                     Helpers.printInvalidInputMessage();
@@ -1281,6 +1925,8 @@ class HumanPlayer extends Player {
     public void addShips(String consoleInput, ScreenManager screenManager) {
         List<Pair<Integer, Integer>> shipsToPlace = GameSettings.copyOfShips();
 
+        AddShipResult shipPlaced;
+
         String centerSpace = " ".repeat(20);
         String halfCenterSpace = " ".repeat(5);
         int currentPointerPlace = 0;
@@ -1289,6 +1935,7 @@ class HumanPlayer extends Player {
 
 
         Helpers.slowType("CAPTAIN WE NEED TO PLACE OUR SHIPS!");
+        Helpers.sleep(1000);
         
 
         while (hasShipsToPlace(shipsToPlace)) {
@@ -1300,7 +1947,7 @@ class HumanPlayer extends Player {
             System.out.println("WE NEED TO PLACE THESE:");
 
             // even autocomplete does not know how to name these variables
-            // autocomplete is kinda funny ngl
+            // inline autocomplete is kinda funny ngl
             // idk what is this autocomplete doing but it is really something
 
 
@@ -1321,7 +1968,11 @@ class HumanPlayer extends Player {
             System.out.println();
 
             // the legend
-            System.out.println(halfCenterSpace + "[A] for moving left [D] for moving right [P] for placing the ship");
+            System.out.println(halfCenterSpace + "[A] for moving left [D] for moving right [P] for placing the ship [Q] for quiting");
+            System.out.println(halfCenterSpace.repeat(4) + "(tip* begin with the bigger ships)");
+
+            System.out.println();
+            System.out.println("TOO TIRED TO THINK FOR YOURSELF???\nLET THE AI DO THE JOB FOR YOU!!!\nJUST TYPE [M]");
 
             // read letter input
             String inputStr = InputManager.getLetter();
@@ -1354,10 +2005,59 @@ class HumanPlayer extends Player {
                     }
 
                     // place the ship
-                    addShip(shipsToPlace.get(currentPointerPlace).first);
+                    shipPlaced = addShip(shipsToPlace.get(currentPointerPlace).first, shipsToPlace);
 
-                    // update the quantity
-                    shipsToPlace.get(currentPointerPlace).second = shipsToPlace.get(currentPointerPlace).second - 1;
+                    // update the quantity if ship placed
+                    if (shipPlaced == AddShipResult.ShipAdded) {
+                        shipsToPlace.get(currentPointerPlace).second = shipsToPlace.get(currentPointerPlace).second - 1;
+                    }
+
+                    if (shipPlaced == AddShipResult.Clear) {
+                        shipsToPlace = GameSettings.copyOfShips();
+                    }
+                    break;
+
+
+                case "q":
+                    return;
+
+                case "m":
+                    boolean generatingShips = true;
+                    while (generatingShips) {
+                        generateShipsPositions();
+
+                        printGrid();
+                        System.out.println();
+                        System.out.println();
+
+                        Helpers.slowType("DO YOU LIKE IT CAPTAIN?\ny/n", false);
+                        consoleInput = InputManager.getLetter();
+                        if (consoleInput.equals("y")) {
+                            Helpers.slowType("THAT'S WHAT I THUGHT, I KNEW YOU'D LIKE IT ", false);
+                            Helpers.slowType("GOOD LITTLE BOY", 70);
+                            return;
+                        } else if (consoleInput.equals("n")) {
+                            Helpers.slowType("LET THE AI TRY AGAIN?\ny/n", false);
+                            consoleInput = InputManager.getLetter();
+                            
+                            if (consoleInput.equals("y")) {
+                                continue;
+                            } else if (consoleInput.equals("n")) {
+                                resetGrid();
+                                Helpers.slowType("WELL THERE YOU GO", false);
+                                Helpers.sleep(300);
+                                Helpers.slowType(", DO IT YOURSELF YOU UNGRATEFULL BASTA", 80);
+                                Helpers.sleep(100);
+
+                                generatingShips = false;
+                                continue;
+                            } else {
+                                printMockingMessageOnAIGridNotLiked();
+                            }
+                        } else {
+                            printMockingMessageOnAIGridNotLiked();
+                        }
+                    }
                     break;
 
                 default:
@@ -1371,6 +2071,19 @@ class HumanPlayer extends Player {
         }
 
         Helpers.slowType("CAPTAIN YOU'RE GOOD TO GO");
+    }
+
+    // in generate ships automatically if user inputs a invalid input, we just generate a new map and say fuck you kinda
+    public void printMockingMessageOnAIGridNotLiked() {
+        resetGrid();
+
+        Helpers.slowType("SORRY CAPTAIN BUT I CAN'T HEAR YOU");
+        Helpers.slowType("GENERATING A NEW MAP IN");
+        System.out.println("3");
+        Helpers.sleep(100);
+        System.out.println("2");
+        Helpers.sleep(100);
+        System.out.println("1");
     }
 
     // prints the ships to place vertically, so it is easier to understand for the player, also it is more cool ngl
@@ -1419,37 +2132,23 @@ class HumanPlayer extends Player {
 
 class Bot extends Player {
 
-    List<Pair<Coordonates, Integer>> validPositions;
-
-    public List<Pair<Coordonates, Integer>> computeValidPositions(int shipSize) {
-        List<Pair<Coordonates, Integer>> validCoords = new ArrayList<>();
-
-        for (int y = 0; y < grid.size(); y++) {
-            for (int x = 0; x < grid.get(y).size(); x++) {
-
-                if (grid.get(y).get(x).equals(GameSettings.waterCharacter)) {
-
-                    if (y + shipSize <= GameSettings.gridSize) {
-                        // check if theres noone on the road and nearby
-                        if (spaceFree(x, y, shipSize, 1)) {
-                            // add a valid vertical(1) position 
-                            validCoords.add(new Pair(new Coordonates(x, y), 1));
-                        }
-                    }
-
-                    if (x + shipSize <= GameSettings.gridSize) {
-                        if (spaceFree(x, y, shipSize, 2)) {
-                            // add valid horizontal(2) position
-                            validCoords.add(new Pair(new Coordonates(x, y), 2));
-                        }
-
-                    }
-                }
-            }
-        }
-
-        return validCoords;
+    Bot() {
+        super();
+        this.playerName = GameSettings.DEFAULT_NAMES[Helpers.generateRandomInt(0, GameSettings.DEFAULT_NAMES.length-1)];
     }
+    
+    public void incrementScore(GameModes gameMode) {
+        if (gameMode == GameModes.BotEasy) {
+            this.score += 3;
+        } else if (gameMode == GameModes.BotMedium) {
+            this.score += 2;
+        } else if (gameMode == GameModes.BotHard) {
+            this.score += 1;
+        } else if (gameMode == GameModes.Sniper) {
+            this.score += 1;
+        }
+    }
+
 
     public List<Coordonates> computeValidMoves(Player enemy) {
         enemy.computeGrid();
@@ -1466,80 +2165,59 @@ class Bot extends Player {
         return validTurns;
     }
 
-    // returns the key of the largest ship
-    public int getLargestShip(List<Pair<Integer, Integer>> ships) {
-        int biggestShip = 0;
-        for (Pair<Integer, Integer> shipData : ships) {
-            if (shipData.second != 0) {
-                biggestShip = Math.max(biggestShip, shipData.first);
-            }
-        }
-        return biggestShip;
-    }
 
-    // generates ships placed randomly
-    public void generateShipsPositions() {
-        // initial grid fill
-        computeGrid();
-
-        List<Pair<Integer, Integer>> shipsToPlace = GameSettings.copyOfShips();
-        int largestShip = 0;
-        // the temp variable for the ship placed, in first has the coords in second has the ship's size
-        Pair<Coordonates, Integer> randomShipPlacement;
-
-        while (hasShipsToPlace(shipsToPlace)) {
-            // choose the largest ship 
-            largestShip = getLargestShip(shipsToPlace);
-
-            // compute it's possible valid positions
-            validPositions = computeValidPositions(largestShip);
-
-            // choose random position
-            randomShipPlacement = validPositions.get(Helpers.generateRandomInt(0, validPositions.size()-1));
-
-            // place ship
-            registerShip(largestShip, randomShipPlacement.first, randomShipPlacement.second);
-
-            // mark ship as placed (remove ship from list of ships to place)
-            for (int i = 0; i < shipsToPlace.size(); i++) {
-                Pair<Integer, Integer> shipData = shipsToPlace.get(i);
-                if (shipData.first == largestShip && shipData.second > 0) {
-                    shipsToPlace.set(i, new Pair<>(shipData.first, shipData.second - 1));
-                    break;
-                }
-            }
-
-            // refill the grid so the program will see ships placed
-            computeGrid();
-        }
-    }
 }
 
 class RandomBot extends Bot {
 
-    // generates a random coordonate
-    // returns true if should pass the turn, false if not
+
+    // 
+    // 
+    /**
+     * generates a random coordonate
+     * @return returns true if should pass the turn, false if not
+     */
     @Override
     public boolean makeTurn(String turn, Player enemy, ScreenManager screenManager) {
         List<Coordonates> validMoves = computeValidMoves(enemy);
 
-/*         System.out.println("Valid Moves:");
-        for (Coordonates coordonates : validMoves) {
-            System.out.println(coordonates.x + " " + coordonates.y);
-        } */
+/*         
+System.out.println("Valid Moves:");
+for (Coordonates coordonates : validMoves) {
+    System.out.println(coordonates.x + " " + coordonates.y);
+} 
+*/
         
         int randomInt = Helpers.generateRandomInt(0, validMoves.size()-1);
 
         Coordonates randomValidMove = validMoves.get(randomInt);
+        
+        ScreenManager.printBotRandomMoveMessage(this.playerName);
 
-        System.out.println("BOT MOVE: (" + randomValidMove.x + " " + randomValidMove.y + ")");
+        Helpers.slowType(this.playerName + " HAS THOUGHT");
+        Helpers.sleep(500);
+        Helpers.slowType("NOW HE WILL HIT THE SPOT");
+        Helpers.sleep(500);
+
+        Helpers.slowType(this.playerName + " CHOSE " + randomValidMove.toString());
+        
+        ScreenManager.printDramaticPauseBeforeMove(this.playerName);
 
         if (enemy.grid.get(randomValidMove.y).get(randomValidMove.x).equals(GameSettings.shipCharacter)) {
-            System.out.println("BOT HIT");
+            ScreenManager.printBotHit(this.playerName);
             enemy.registerHit(new Hit(new Coordonates(randomValidMove.x, randomValidMove.y)));
+
+            // check ship destroyed
+            if (shipDestroyed(randomValidMove.x, randomValidMove.y, enemy.grid, Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize))) {
+                // mark ship as destroyed
+                markShipAsDestroyed(randomValidMove, enemy.grid, enemy.boardObjects);
+            }
+
+            incrementHitCount();
             return false;
+
         } else if (enemy.grid.get(randomValidMove.y).get(randomValidMove.x).equals(GameSettings.waterCharacter)) {
-            System.out.println("BOT MISS");
+            ScreenManager.printBotMiss(this.playerName);
             enemy.registerMiss(new Miss(new Coordonates(randomValidMove.x, randomValidMove.y)));
             return true;
         }
@@ -1548,6 +2226,7 @@ class RandomBot extends Bot {
     }
 }
 
+
 class BoardObject {
     public Coordonates coordonates;
     public String graphic;
@@ -1555,6 +2234,9 @@ class BoardObject {
     public int size;
     // either 1 for vertical or 2 for horizontal
     public int direction;
+    
+    // only for ships
+    protected boolean destroyed;
 
     BoardObject(String coordonatesInput)  {
         this.coordonates = new Coordonates(coordonatesInput);
@@ -1575,6 +2257,15 @@ class BoardObject {
         this.size = size;
         this.direction = direction;
     }
+    
+    public boolean shipDestroyed() {
+        return destroyed;
+    }
+
+    public void setShipAsDestroyed() {
+        destroyed = true;
+        graphic = GameSettings.shipDestroyedCharacter;
+    }
 
     public void printData() {}
 }
@@ -1584,21 +2275,15 @@ class Ship extends BoardObject {
     Ship(int size, String coords, int direction) {
         super(coords, size, direction);
         graphic = GameSettings.shipCharacter;
+        destroyed = false;
     }
 
     Ship(int size, Coordonates coords, int direction) {
         super(coords, size, direction);
         graphic = GameSettings.shipCharacter;
+        destroyed = false;
     }
 
-
-    public void printData() {
-        System.out.println();
-        Helpers.slowType("ship x and y: " + coordonates.x + " " + coordonates.y);
-        Helpers.slowType("ships size: " + size);
-        Helpers.slowType("ship direction: " + direction);
-        System.out.println();
-    }
 }
 
 class Miss extends BoardObject {
@@ -1634,129 +2319,358 @@ class Hit extends BoardObject {
 class ScreenManager {
 
     // NOTE these embelishments do not print a endline at the end
-    private final String TRANSITION_LINE = "<~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~>";
-    public static final String STD_LINE = "===============================================";
-    private final String STD_SPACE = GameSettings.STD_SPACE;
-    private final String HIT_MESSAGE = """
-                                    (X) -------------------------------------- (X)\r\n
-                                        LOVITURA DIRECTA! RUPERE IN CARENA INAMICA DETECTATA!\r\n 
-                                    (X) -------------------------------------- (X)
+    private static final String TRANSITION_LINE = "<~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~>";
+    public static final String STD_LINE = "════════════════════════════════════════════════════════════════════════════════════════════════════════════";
+    public static final String STD_SMALL_LINE = "────────────────────────────────────────────────────────────────────────────────────────────────────────────";
+    // graphics
+    // welcome to the imperium of bad names
+    private static final String borderTopBegin = "╔";
+    private static final String borderTopEnd = "╗";
+    private static final String borderMidBegin = "╠";
+    private static final String borderMidEnd = "╣";
+    private static final String borderBottomBegin = "╚";
+    private static final String borderBottomEnd = "╝";
+    private static final String borderHorizontalLine = "═";
+    private static final String borderVerticalLine = "║";
+    
+    private static final String STD_SPACE = GameSettings.STD_SPACE;
+    private static final String MENU_PADDING = " ".repeat(2);
+    private static final String MENU_LINE_START = borderVerticalLine + MENU_PADDING;
+
+
+    private static final String HIT_MESSAGE = """
+                                    (X) ─────────────────────────────────────────────────── (X)\r\n
+                                        DIRECT HIT! A BREAK IN THE ENEMY SHIP IS DETECTED!\r\n 
+                                    (X) ─────────────────────────────────────────────────── (X)
                                     """;
 
-    private final String MISS_MESSAGE = """
-                                    [!] -------------------------------------- [!]\r\n
-                                        PlIOSC! COORDONATE PUSTII. FĂRĂ CONTACT...\r\n
-                                    [!] -------------------------------------- [!]
+                                    // add something like captain you need to hit the ships not the fishes
+    private static final String MISS_MESSAGE = """
+                                    (O) ─────────────────────────────────────── (O)\r\n
+                                        MISS! EMPTY COORDONATES. NO CONTACT...\r\n
+                                    (O) ─────────────────────────────────────── (O)
                                     """;
 
-    private final String GAME_LOGO = """
-             ____       _______ _______ _      ______  _____ _    _ _____ _____   _____  
-            |  _ \\   /\\|__   __|__   __| |    |  ____|/ ____| |  | |_   _|  __ \\ / ____| 
-            | |_) | /  \\  | |     | |  | |    | |__  | (___ | |__| | | | | |__) | (___   
-            |  _ < / /\\ \\ | |     | |  | |    |  __|  \\___ \\|  __  | | | |  ___/ \\___ \\  
-            | |_) / ____ \\| |     | |  | |____| |____ ____) | |  | |_| |_| |     ____) | 
-            |____/_/    \\_\\_|     |_|  |______|______|_____/|_|  |_|_____|_|    |_____/  
-                                                                              
-                                                                              
+    private static final String SHIP_DESTROYED_MESSAGE = """
+                                    [!] ─────────────────────────────────────────────── [!]\r\n
+                                        SHIP DESTROYED! THE ENEMY IS LOSING HIS UNITS!\r\n 
+                                    [!] ─────────────────────────────────────────────── [!]
+                                    """;
+
+    private static final String GAME_LOGO = """
+            ║  __  __  ____  _____   _____ _  ________     __     _           _ 
+            ║ |  \\/  |/ __ \\|  __ \\ / ____| |/ / __ \\ \\   / /    | |         (_)
+            ║ | \\  / | |  | | |__) | (___ | ' / |  | \\ \\_/ /     | |__   ___  _ 
+            ║ | |\\/| | |  | |  _  / \\___ \\|  <| |  | |\\   /      | '_ \\ / _ \\| |
+            ║ | |  | | |__| | | \\ \\ ____) | . \\ |__| | | |       | |_) | (_) | |
+            ║ |_|  |_|\\____/|_|  \\_\\_____/|_|\\_\\____/  |_|       |_.__/ \\___/|_|
             """;
 
-    private final String SIX_SEVEN = 
-    """
-            +--------------------+     +-------------------------/
-            |                    |     |                        /
-            |                    |     |                       /
-            |        +-----------+     +-------------+        /
-            |        |                              /        /
-            |        +----------+                  /        /
-            |                   |                 /        /
-            |        __         |                /        /
-            |       {  }        |               /        /
-            |        \\/         |              /        /
-            |                   |             /        /
-            +-------------------+            /--------/
-    """;
+    private static final String[] SIX_SEVENS = {
+                                """
+                                        +--------------------+     +-------------------------/
+                                        |                    |     |                        /
+                                        |                    |     |                       /
+                                        |        +-----------+     +-------------+        /
+                                        |        |                              /        /
+                                        |        +----------+                  /        /
+                                        |                   |                 /        /
+                                        |        __         |                /        /
+                                        |       {  }        |               /        /
+                                        |        \\/         |              /        /
+                                        |                   |             /        /
+                                        +-------------------+            /--------/
+                                """,
+                                """
+ $$$$$$\\  $$$$$$$$\\ 
+$$  __$$\\ \\____$$  |
+$$ /  \\__|    $$  / 
+$$$$$$$\\     $$  /  
+$$  __$$\\   $$  /   
+$$ /  $$ | $$  /    
+ $$$$$$  |$$  /     
+ \\______/ \\__/           
+                                """,
+                                """
+                                         _____ _______   __   _____ ________      ________ _   _ 
+                                        / ____|_   _\\ \\ / /  / ____|  ____\\ \\    / /  ____| \\ | |
+                                        | (___   | |  \\ V /  | (___ | |__   \\ \\  / /| |__  |  \\| |
+                                        \\___ \\  | |   > <    \\___ \\|  __|   \\ \\/ / |  __| | . ` |
+                                        ____) |_| |_ / . \\   ____) | |____   \\  /  | |____| |\\  |
+                                        |_____/|_____/_/ \\_\\ |_____/|______|   \\/   |______|_| \\_|  
+                                """,
+                                """
+ $$$$$$\\  $$$$$$\\ $$\\   $$\\        $$$$$$\\  $$$$$$$$\\ $$\\    $$\\ $$$$$$$$\\ $$\\   $$\\ 
+$$  __$$\\ \\_$$  _|$$ |  $$ |      $$  __$$\\ $$  _____|$$ |   $$ |$$  _____|$$$\\  $$ |
+$$ /  \\__|  $$ |  \\$$\\ $$  |      $$ /  \\__|$$ |      $$ |   $$ |$$ |      $$$$\\ $$ |
+\\$$$$$$\\    $$ |   \\$$$$  /       \\$$$$$$\\  $$$$$\\    \\$$\\  $$  |$$$$$\\    $$ $$\\$$ |
+ \\____$$\\   $$ |   $$  $$<         \\____$$\\ $$  __|    \\$$\\$$  / $$  __|   $$ \\$$$$ |
+$$\\   $$ |  $$ |  $$  /\\$$\\       $$\\   $$ |$$ |        \\$$$  /  $$ |      $$ |\\$$$ |
+\\$$$$$$  |$$$$$$\\ $$ /  $$ |      \\$$$$$$  |$$$$$$$$\\    \\$  /   $$$$$$$$\\ $$ | \\$$ |
+ \\______/ \\______|\\__|  \\__|       \\______/ \\________|    \\_/    \\________|\\__|  \\__|
+                                """, 
+                                """
+        6666666677777777777777777777
+       6::::::6 7::::::::::::::::::7
+      6::::::6  7::::::::::::::::::7
+     6::::::6   777777777777:::::::7
+    6::::::6               7::::::7 
+   6::::::6               7::::::7  
+  6::::::6               7::::::7   
+ 6::::::::66666         7::::::7    
+6::::::::::::::66      7::::::7     
+6::::::66666:::::6    7::::::7      
+6:::::6     6:::::6  7::::::7       
+6:::::6     6:::::6 7::::::7        
+6::::::66666::::::67::::::7         
+ 66:::::::::::::667::::::7          
+   66:::::::::66 7::::::7           
+     666666666  77777777
+                                """,
+                                """
+                _________  
+               /         | 
+              '-----.   .' 
+     .-''''-.     .'  .'   
+    /  .--.  \\  .'  .'     
+   /  /    '-'.'  .'       
+  /  /.--.   '---'         
+ /  ' _   \\                
+/   .' )   |               
+|   (_.'   /               
+ \\       '                 
+   `----'                       
+                                """,
+                                """
+   __      _____  
+U /"/_ u  |___ "| 
+\\| '_ \\/     / /  
+ | (_) |  u// /\\  
+  \\___/    /_/ U  
+ _// \\\\_  <<>>_   
+(__) (__)(__)__)     
+                                """,
+                                """
+             
+ (        )  
+ )\\ )  ( /(  
+(()/(  )\\()) 
+ /(_))((_)\\  
+(_) /|__  /  
+ / _ \\ / /   
+ \\___//_/      
+                                """,
+                                """
+   oo_   wW  Ww wW    Ww       oo_         wWw    wWw     \\\\\\  /// 
+  /  _)-<(O)(O)(O)\\  /(O)     /  _)-<  wWw (O)    (O) wWw ((O)(O)) 
+  \\__ `.  (..)  `. \\/ .'      \\__ `.   (O)_( \\    / ) (O)_ | \\ ||  
+     `. |  ||     \\  /           `. | .' __)\\ \\  / / .' __)||\\\\||  
+     _| | _||_    /  \\           _| |(  _)  /  \\/  \\(  _)  || \\ |  
+  ,-'   |(_/\\_) .' /\\ `.      ,-'   | `.__) \\ `--' / `.__) ||  ||  
+ (_..--'       (_.'  `._)    (_..--'         `-..-'       (_/  \\_) 
+                                """,
+                                """
+  .-')           ) (`-.             .-')      ('-.        (`-.      ('-.       .-') _  
+ ( OO ).          ( OO ).          ( OO ).  _(  OO)     _(OO  )_  _(  OO)     ( OO ) ) 
+(_)---\\_)  ,-.-')(_/.  \\_)-.      (_)---\\_)(,------.,--(_/   ,. \\(,------.,--./ ,--,'  
+/    _ |   |  |OO)\\  `.'  /       /    _ |  |  .---'\\   \\   /(__/ |  .---'|   \\ |  |\\  
+\\  :` `.   |  |  \\ \\     /\\       \\  :` `.  |  |     \\   \\ /   /  |  |    |    \\|  | ) 
+ '..`''.)  |  |(_/  \\   \\ |        '..`''.)(|  '--.   \\   '   /, (|  '--. |  .     |/  
+.-._)   \\ ,|  |_.' .'    \\_)      .-._)   \\ |  .--'    \\     /__) |  .--' |  |\\    |   
+\\       /(_|  |   /  .'.  \\       \\       / |  `---.    \\   /     |  `---.|  | \\   |   
+ `-----'   `--'  '--'   '--'       `-----'  `------'     `-'      `------'`--'  `--' 
+                                """,
+                                """
+            _____    ____________ _____       _____                   _____     _____\\    \\ _______    ______   _____\\    \\  _____    _____     
+       _____\\    \\  /            \\\\    \\     /    /              _____\\    \\   /    / |    |\\      |  |      | /    / |    ||\\    \\   \\    \\    
+      /    / \\    ||\\___/\\  \\\\___/|\\    |   |    /              /    / \\    | /    /  /___/| |     /  /     /|/    /  /___/| \\\\    \\   |    |   
+     |    |  /___/| \\|____\\  \\___|/ \\    \\ /    /              |    |  /___/||    |__ |___|/ |\\    \\  \\    |/|    |__ |___|/  \\\\    \\  |    |   
+  ____\\    \\ |   ||       |  |       \\    |    /            ____\\    \\ |   |||       \\       \\ \\    \\ |    | |       \\         \\|    \\ |    |   
+ /    /\\    \\|___|/  __  /   / __    /    |    \\           /    /\\    \\|___|/|     __/ __     \\|     \\|    | |     __/ __       |     \\|    |   
+|    |/ \\    \\      /  \\/   /_/  |  /    /|\\    \\         |    |/ \\    \\     |\\    \\  /  \\     |\\         /| |\\    \\  /  \\     /     /\\      \\  
+|\\____\\ /____/|    |____________/| |____|/ \\|____|        |\\____\\ /____/|    | \\____\\/    |    | \\_______/ | | \\____\\/    |   /_____/ /______/| 
+| |   ||    | |    |           | / |    |   |    |        | |   ||    | |    | |    |____/|     \\ |     | /  | |    |____/|  |      | |     | | 
+ \\|___||____|/     |___________|/  |____|   |____|         \\|___||____|/      \\|____|   | |      \\|_____|/    \\|____|   | |  |______|/|_____|/  
+                                                                                    |___|/                          |___|/                     
+                                """,
+                                """
+░░      ░░░        ░░  ░░░░  ░░░░░░░░░      ░░░        ░░  ░░░░  ░░        ░░   ░░░  ░
+▒  ▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒    ▒▒  ▒
+▓▓      ▓▓▓▓▓▓  ▓▓▓▓▓▓▓    ▓▓▓▓▓▓▓▓▓▓▓      ▓▓▓      ▓▓▓▓▓  ▓▓  ▓▓▓      ▓▓▓▓  ▓  ▓  ▓
+███████  █████  ██████  ██  ███████████████  ██  ██████████    ████  ████████  ██    █
+██      ███        ██  ████  █████████      ███        █████  █████        ██  ███   █
+                                """,
+                                """
+   ___     (_)    __ __     o O O   ___     ___    __ __    ___    _ _    
+  (_-<     | |    \\ \\ /    o       (_-<    / -_)   \\ V /   / -_)  | ' \\   
+  /__/_   _|_|_   /_\\_\\   TS__[O]  /__/_   \\___|   _\\_/_   \\___|  |_||_|  
+_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| {======|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| 
+"`-0-0-'"`-0-0-'"`-0-0-'./o--000'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
+                                """,
+                                """
+    __     ____                                                           
+   / /    |__  |                                                          
+  / _ \\     / /                                                           
+  \\___/   _/_/_                                                           
+_|\"\"\"\"\"|_|\"\"\"\"\"|                                                          
+"`-0-0-'"`-0=0-'
+                                """
+                            };
 
-    private final String ONE = """
-                __
-               |  |
-               |  |
-               |  |
-               |  |
-               |__|
+    private static final String ONE = """
+             __
+            |  |
+            |  |
+            |  |
+            |  |
+            |__|
             """;
 
-    private final String TWO = """
-              ___  
-             |__ \\ 
-                 ) |
-                / / 
-              / /_ 
-             |____|
+    private static final String TWO = """
+             ___  
+            |__ \\ 
+               ) |
+              / / 
+             / /_ 
+            |____|
             """;
 
-    private final String THREE = """
-            ____  
+    private static final String THREE = """
+             ____  
             |___ \\ 
-            __) |
-            |__ < 
-            ___) |
+             __)  |
+            |__  < 
+             ___) |
             |____/ 
             """;
 
-    private final String FIGHT = """
-            ______ _____ _____ _    _ _______ 
-            |  ____|_   _/ ____| |  | |__   __|
-            | |__    | || |  __| |__| |  | |   
-            |  __|   | || | |_ |  __  |  | |   
-            | |     _| || |__| | |  | |  | |   
-            |_|    |_____\\_____|_|  |_|  |_|   
-            """;
-
     // screens
-    public void printMainMenu() {
-        System.out.println(STD_LINE);
-        Helpers.sleep(50);
-        System.out.println(GAME_LOGO);
-        Helpers.sleep(50);
-        System.out.println(STD_LINE);
 
-        //options 
-        System.out.println(STD_SPACE + "[1] LA RAZBOI!");
-        Helpers.sleep(50);
-        System.out.println(STD_SPACE + "[2] SETARI");
-        Helpers.sleep(50);
-        System.out.println(STD_SPACE + "[3] DONEAZA");
-        Helpers.sleep(50);
-        System.out.println(STD_SPACE + "[4] GAME MODES");
-        Helpers.sleep(50);
-        System.out.println(STD_SPACE + "[0] ESIRE");
-        
-        System.out.println(STD_LINE);
-        System.out.println(STD_SPACE + "SISTEMA E GATA...");
-        Helpers.sleep(10);
-        System.out.println(STD_SPACE + "ASTEPTAM COMENZI CAPITANE!");
-        Helpers.sleep(50);
+    // 'clears' console
+    public static void clearConsole() {
+        System.out.println("\n".repeat(50));
     }
 
-    public void printLoadingScreen() {
-        Helpers.slowType("ICARCARE SISTEMA...");
+    public static void printScreensBottomPadding(int screenOcupied) {
+/*         int screenSize = 34;
+        System.out.println("\n".repeat(screenSize-screenOcupied)); */
+    }
+
+    // the initial loading screen
+    public static void printLoadingScreen() {
+        clearConsole();
+        Helpers.printMessageAndThreeDotsSlowly("LOADING SYSTEM");
         Helpers.sleep(500);
-        Helpers.slowType("PREGATIRE AMUNITIE...");
+        Helpers.printMessageAndThreeDotsSlowly("PREPARING AMUNITION");
         Helpers.sleep(500);
-        Helpers.slowType("LANSAREA TARPEDELOR...");
+        Helpers.printMessageAndThreeDotsSlowly("LAUNCHING TORPEDOS");
         Helpers.sleep(500);
-        Helpers.slowType("INCALZIRE MOTOARE...");
+        Helpers.printMessageAndThreeDotsSlowly("HEATING THE ENGINE");
         Helpers.sleep(500);
-        System.out.println("FINISAT!");
+        System.out.println("FINISHED!");
         Helpers.sleep(1500);
     }
 
-    public void print67() {
-        System.out.println(SIX_SEVEN);
-        Helpers.sleep(2000);
+    // the main menu
+    public static void printMainMenu() {
+        int screenSize = 0;
+        clearConsole();
+
+        System.out.print(borderTopBegin);
+        System.out.println(STD_LINE);
+        screenSize++;
+
+        System.out.print(borderVerticalLine);
+        System.out.println();
+        screenSize++;
+
+        System.out.print(GAME_LOGO);
+        System.out.print(borderVerticalLine);
+        System.out.println();
+        screenSize++;
+
+        System.out.print(borderVerticalLine);
+        System.out.println();
+        screenSize++;
+
+        System.out.print(borderVerticalLine);
+        System.out.println(STD_SMALL_LINE);
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println("[ STATUS ]  " + Colors.GREEN + "SYSTEM READY" + Colors.RESET);
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println();
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println("AVALAIBLE COMMANDS:");
+        screenSize++;
+
+        //options 
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[1] FIGHT!");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[2] SETTINGS");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[3] DONATE");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[4] GAME MODES");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[5] RULES/MANPAGE");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[0] EXIT");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println();
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        screenSize++;
+        
+        System.out.println("[!] CAPTAIN THE SYSTEM IS AWAITING INPUT");
+        screenSize++;
+
+        System.out.print(borderBottomBegin);
+        System.out.println(STD_LINE);
+        screenSize++;
+
+        printScreensBottomPadding(screenSize);
     }
 
-    public void printSettingsScreen() {
+    public static void print67() {
+        int sixSevensToBePrinted = Helpers.generateRandomInt(10, 20);
+        String sixSeven;
+        for (int i = 0; i < sixSevensToBePrinted; i++) {
+            sixSeven = SIX_SEVENS[Helpers.generateRandomInt(0, SIX_SEVENS.length-1)];
+
+            System.out.println(sixSeven);
+            Helpers.sleep(100);
+        }
+        Helpers.slowType("CAPTAIN ", 60, false);
+        Helpers.sleep(800);
+        Helpers.slowType("YOU", 180, false);
+        Helpers.slowType(" MADE ME ", 90, false);
+        Helpers.slowType(Colors.RED + "DO" + Colors.RESET, 180, false);
+        Helpers.slowType(" IT", 90, false);
+        Helpers.slowType("...", 120);
+        Helpers.sleep(5000);
+    }
+
+    public static void printSettingsScreen() {
         System.out.println(STD_LINE);
         System.out.println("(*) WHAT DO WE WANT TO CHANGE CAPTAIN?");
         System.out.println(STD_LINE);
@@ -1768,37 +2682,134 @@ class ScreenManager {
         System.out.println(STD_SPACE + "(0). exit");
     }
 
-    public void askCaptainName() {
+    public static void chooseGameScreen() {
+        int screenSize = 0;
+
+        clearConsole();
+        System.out.print(borderTopBegin);
+        System.out.println(STD_LINE);
+        screenSize++;
+
+        System.out.print(borderVerticalLine);
+        System.out.println(STD_SMALL_LINE);
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println("WHO WE DESTROY TODAY CAPTAIN?");
+        screenSize++;
+
+        System.out.print(borderVerticalLine);
+        System.out.println(STD_SMALL_LINE);
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println();
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[1] A RANDOM BOT");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[2] AN ALGORITHIC BOT");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[3] AN AI");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[4] LOCAL PVP");
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[0] MAIN MENU");
+        screenSize++;
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println();
+        screenSize++;
+
+        System.out.print(MENU_LINE_START);
+        System.out.println("[!] CAPTAIN THE SYSTEM IS AWAITING INPUT");
+        screenSize++;
+
+        System.out.print(borderBottomBegin);
+        System.out.println(STD_LINE);
+        screenSize++;
+        
+        
+        printScreensBottomPadding(screenSize);
+    }
+
+    public static void askCaptainName() {
         System.out.println(STD_LINE);
         System.out.println(STD_SPACE + "CAPTAIN HOW SHOULD WE CALL YOU?");
         System.out.println(STD_LINE);
         System.out.println("(if nothing types the default CAPTAIN is chosen)");
     }
 
-    public void chooseGameModeScreen() {
-        System.out.println(STD_LINE);
-        Helpers.slowType(STD_SPACE + "WHO WE DESTROY TODAY CAPTAIN");
-        System.out.println(STD_LINE);
-        Helpers.slowType(STD_SPACE + "[1] A RANDOM BOT");
-        Helpers.slowType(STD_SPACE + "[2] AN ALGORITHIC BOT");
-        Helpers.slowType(STD_SPACE + "[3] AN AI");
-        Helpers.slowType(STD_SPACE + "[4] LOCAL PVP");
-        Helpers.slowType(STD_SPACE + "[0] MAIN MENU");
 
+
+    public static void chooseGameModeScreen() {
+        int screenSize = 0;
+
+        clearConsole();
+        System.out.print(borderTopBegin);
+        System.out.println(STD_LINE);
+        screenSize++;
+        System.out.println(borderVerticalLine + STD_SMALL_LINE);
+        screenSize++;
+        System.out.println(MENU_LINE_START + STD_SPACE + "WHAT GAME MODE WE PLAYIN' CAPTAIN?");
+        screenSize++;
+        System.out.println(borderVerticalLine + STD_SMALL_LINE);
+        screenSize++;
+        System.out.println(MENU_LINE_START);
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[1] BOT EASY");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(bot makes a move per your move)");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[2] BOT MEDIUM");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(bot makes 2 moves per your move)");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[3] BOT HARD");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(bot makes 3 moves per your move)");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[4] SNIPER DUEL");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(you and bot have only 1, 1 tiled ship, the first who hits wins!)");
+        screenSize++;
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[0] BACK");
+        screenSize++;
+        System.out.print(borderBottomBegin);
+        System.out.println(STD_LINE);
+        screenSize++;
+        
+        printScreensBottomPadding(screenSize);
     }
 
-    public void placingShipsMenu() {
+    public static void placingShipsMenu() {
         System.out.println(STD_LINE);
         System.out.println(STD_SPACE);
         Helpers.slowType("Captain,");
         Helpers.sleep(300);
         Helpers.slowType("BEFORE THE FIGHT WE NEED TO PLACE OUR SHIPS!");
         System.out.println(STD_LINE);
-        System.out.println("[DEBUG] for now just give coords and size and dir");
-        System.out.println("tss simple now but were gonna add cool stuff later on");
     }
 
-    public void gameStartScreen() {
+    public static void gameStartScreen() {
         System.out.println(STD_LINE);
         Helpers.slowType("PLAYERS ARE YOU READY?");
         System.out.println(STD_LINE);
@@ -1813,11 +2824,9 @@ class ScreenManager {
 
         System.out.println(ONE);
         Helpers.sleep(300);
-
-        System.out.println(FIGHT);
     }
 
-    public void askPlayerMoveScreen(String playerName) {
+    public static void askPlayerMoveScreen(String playerName) {
         System.out.println();
         System.out.println();
         System.out.println(TRANSITION_LINE);
@@ -1825,10 +2834,167 @@ class ScreenManager {
         System.out.println();
     }
 
-    public void printShipDestroyedScreen() {
-        System.out.println(STD_LINE);
-        Helpers.slowType("CAPTAIN WE DESTROYED ONE OF 'EM");
-        System.out.println(STD_LINE);
+    // prints the scores of players
+    // the mode takes either o or h for overall or hits
+    public static void printScore(int player1Score, int player2Score, String player1Name, String player2Name, String mode) {
+        String horizontalPadding = " ".repeat(2);
+
+        
+        String centeredText = mode.equals("o") ? GameSettings.GAME_NAME : "HITS SCOREBOARD";
+
+        String scoreDescription = mode.equals("o") ? "POINTS" : "HITS";
+
+        // calculate the width of the score board
+        int scoreBoardWidth = 0;
+        scoreBoardWidth += horizontalPadding.length() * 8; 
+        scoreBoardWidth += player1Name.length() + player2Name.length();
+        scoreBoardWidth += String.valueOf(player1Score).length() + String.valueOf(player2Score).length();
+        scoreBoardWidth += scoreDescription.length() * 2;
+        scoreBoardWidth += 9;   // for spaces and other characters
+
+        boolean borderOdd = scoreBoardWidth % 2 == 1;
+
+        // add one for odd names
+        if (borderOdd) {
+            scoreBoardWidth++;
+        }
+
+        System.out.println(borderTopBegin + borderHorizontalLine.repeat(scoreBoardWidth) + borderTopEnd);
+
+
+        System.out.println(
+            borderVerticalLine + 
+            " ".repeat((scoreBoardWidth-centeredText.length())/ 2) +
+            centeredText +
+            " ".repeat((scoreBoardWidth-centeredText.length())/ 2) +
+            " " + borderVerticalLine
+        );
+
+        System.out.println(borderMidBegin + borderHorizontalLine.repeat(scoreBoardWidth) + borderMidEnd);
+
+        System.out.print(
+            borderVerticalLine + horizontalPadding + 
+            "[ " + player1Name + " ]" + horizontalPadding + 
+            player1Score + horizontalPadding + scoreDescription + 
+            horizontalPadding + "│" + horizontalPadding +
+            "[ " + player2Name + " ]" + horizontalPadding + 
+            player2Score + horizontalPadding + scoreDescription +
+            horizontalPadding
+        );
+
+        if (borderOdd) {
+            System.out.print(" ");
+        }
+
+        System.out.println(borderVerticalLine);
+
+        System.out.println(borderBottomBegin + borderHorizontalLine.repeat(scoreBoardWidth) + borderBottomEnd);        
+    }
+
+    // prints beautifull stuff before hit
+    public static void printDramaticPauseBeforeMove() {
+        Helpers.printMessageAndThreeDotsSlowly("LAUNCHING TORPEDO");
+        Helpers.sleep(500);
+        Helpers.slowType("UNTIL IMPACT:");
+        print321();
+    }
+
+    // this is the same thing but for the bot
+    public static void printDramaticPauseBeforeMove(String botName) {
+        Helpers.printMessageAndThreeDotsSlowly("LAUNCHING " + botName + "'S TORPEDO");
+        Helpers.sleep(500);
+        Helpers.slowType("UNTIL IMPACT:");
+        print321();
+    }
+
+    public static void print321() {
+        System.out.println(THREE);
+        Helpers.sleep(1000);
+        System.out.println(TWO);
+        Helpers.sleep(1000);
+        System.out.println(ONE);
+        Helpers.sleep(600);
+    }
+
+    public static void printHitMessage() {
+        System.out.println(HIT_MESSAGE);
+    }
+
+    public static void printMissMessage() {
+        System.out.println(MISS_MESSAGE);
+    }
+
+    public static void printShipDestroyedMessage() {
+        System.out.println(SHIP_DESTROYED_MESSAGE);
+    }
+
+    public static void printBotRandomMoveMessage(String botName) {
+        String[] botMoveMessages = {
+            botName + " IS PREPARING HIS GIGANT TORPEDO...",
+            botName + " IS SOLVING THE 3n+1 PROBLEM...",
+            botName + " IS CONSULTING THE HOROSCOPE...",
+            botName + " IS SOLVING A EQUATION...",
+            botName + " IS TAKING A NAP...",
+            botName + " IS CONTEMPLATING ABOUT LIFE...",
+            botName + " NEEDS TIME...",
+            botName + " KNOWS WHAT HE DOES...",
+            "NOW " + botName + " WILL SHOW US SKILL...",
+            "NOW " + botName + " WILL SHOW US SOME SKILL...",
+            "I THINK " + botName + " FELT ASLEEP...",
+            "I THINK " + botName + " FELT ASLEEP WHILE CALCULATING...",
+            botName + " IS CALCULATING HIS MOVES...",
+            botName + " IS CALCULATING 10 MOVES AHEAD...",
+            botName + " SAYS TO TRUST THE PROCESS...",
+        };
+
+        // how many random messages to say
+        int repeat = Helpers.generateRandomInt(1, 2);
+        int said = -1;
+        int randomInt = -1;
+        for (int i = 0; i < repeat; i++) {
+            while (randomInt == said) {
+                randomInt = Helpers.generateRandomInt(0, botMoveMessages.length-1);
+            }
+            Helpers.slowType(botMoveMessages[randomInt]);
+            Helpers.sleep(Helpers.generateRandomInt(500, 1500));
+            said = randomInt;
+        }
+    }
+
+    public static void printBotHit(String botName) {
+        String[] botHitMessages = {
+            botName + " HIT THE TARGET!",
+            botName + " SUCCESSFULLY HIT THE TARGET!",
+            botName + " IS HITTING THE TARGET!",
+            botName + " IS INDEED SHOWING HIS SKILL!",
+            botName + " HIT RIGHT IN THE TARGET!",
+            botName + " HIT RIGHT IN THE G SPOT!",
+            "BLUD THINKS HE'S " + botName + " EINSTEIN!",
+            botName + " IS ACTUALLY A GENIUS!",
+            botName + " IS HIM!",
+            botName + " IS ACTUALLY A SNIPER UNDERCOVER!",
+            "CAPTAIN I THINK YOU NEED SOME LESSONS FROM " + botName + ", CUZ HIT RIGHT IN THE SPOT!",
+        };
+
+        Helpers.slowType(botHitMessages[Helpers.generateRandomInt(0, botHitMessages.length-1)]);
+        Helpers.sleep(3000);
+    }
+
+    public static void printBotMiss(String botName) {
+        String[] botMissMessages = {
+            botName + " MISSED THE TARGET!",
+            botName + " SUCCESSFULLY MISSED THE TARGET!",
+            botName + " IS NOT IN THE MOOD TO HIT TODAY!",
+            botName + " MISSED, BUT HE KNOWS WHERE TO HIT NEXT TIME!",
+            "BLUD " + botName + " THINKS HE'S EPSTEIN!",
+            botName + " THOUGHT HE'S EINSTEIN, UNTIL HE MISSED!",
+            botName + " IS ACTUALLY A GENIUS, BUT HE MISSED THIS TIME!",
+            botName + " IS ACTUALLY A GENIUS, BUT HE'S UNLUCKY TODAY!",
+            "GET A LOAD OF THIS GUY, " + botName + " MISSED!",
+        };
+
+        Helpers.slowType(botMissMessages[Helpers.generateRandomInt(0, botMissMessages.length-1)]);
+        Helpers.sleep(3000);
     }
 }
 
@@ -1847,11 +3013,16 @@ class Helpers {
     }
 
     public static int translateLetterToNumber(char letter) {
-        return letter - 'A' + 1;
+        if (letter >= 'A' && letter <= 'Z') {
+            return letter - 'A' + 1;
+        } else if (letter >= 'a' && letter <= 'z') {
+           return letter - 'a' + 1; 
+        } 
+        return -1;
     }
 
-    public static int translateNumberToLetter(int nr) {
-        return nr + 'A' + 1;
+    public static char translateNumberToLetter(int nr) {
+        return (char)(nr + 'A');
     }
 
     // overloaded function to type slowly text
@@ -1890,13 +3061,94 @@ class Helpers {
         }
     }
 
+    public static void printMessageAndThreeDotsSlowly(String msg) {
+        slowType(msg, false);
+        slowType(".", 500, false);
+        slowType(".", 500, false);
+        slowType(".", 500, false);
+        System.out.println();
+    }
+    // don't try setting slowly to false, it will still be slow :)
+    public static void printMessageAndThreeDotsSlowly(String msg, boolean slowly) {
+        slowType(msg, 80, false);
+        slowType(".", 700, false);
+        slowType(".", 700, false);
+        slowType(".", 700, false);
+        System.out.println();
+    }
+
     // generates a random number between a and b inclussive
     public static int generateRandomInt(int lowerBound, int upperBound) {
         // we add 1 to make the bound inclussive
         return ThreadLocalRandom.current().nextInt(lowerBound, upperBound+1);
     }
 
+    // prints a random message that the input chosen is invalid
     public static void printInvalidInputMessage() {
-        slowType("CAPTAIN THIS IS INVALID");
+        String[] invalidInputMessages = {
+            "CAPTAIN THIS IS NOT A VALID COMMAND!",
+            "INVALID INPUT CAPTAIN, TRY AGAIN!",
+            "CAPTAIN, THIS IS NOT A VALID OPTION!",
+            "CAPTAIN, WE CAN'T DO THIS, TRY AGAIN!",
+            "CAPTAIN TRY AGAIN, NEXT TIME CHOOSE A VALID OPTION!",
+            "CAPTAIN ARE YOU DRUNK?, MAKE A VALID CHOICE!",
+            "CAPTAIN BE SERIOUS ABOUT THIS, CHOOSE A VALID OPTION!",
+            "DID YOU FALL ON YOUR HEAD CAPTAIN?, THIS IS NOT A COMMAND!",
+            "CAPTAIN DID YOU JUST MAKE A TYPO?, THIS IS INVALID!",
+            "CAPTAIN DID YOU TAKE A LOBOTOMY?, THIS IS NOT A VALID COMMAND!",
+            "BAD LUCK, BETTER CHOICE NEXT TIME CAPTAIN!",
+            "DID YOU JUST TRY TO BREAK THE GAME CAPTAIN?, NOT ON MY WATCH!",
+            "DID YOU FALL ASLEEP ON THE KEYBOARD CAPTAIN?, THIS IS NOT A VALID INPUT!",
+            "DID YOU FALL FROM THE SHIP CAPTAIN?, THIS IS NOT A VALID COMMAND!",
+        };
+        slowType(invalidInputMessages[generateRandomInt(0, invalidInputMessages.length - 1)]);
+    }
+
+    public static void printRandomAskMove() {
+        String[] askMoveMessages = {
+            "CAPTAIN WE NEED TO HIT 'EM BEFORE THEY HIT US\nWHAT ARE YOUR COORDONATES?",
+            "CAPTAIN WHERE DO YOU WANT TO SHOOT?",
+            "CAPTAIN THE ENEMY IS STILL OUT THERE, WHAT IS YOUR MOVE?",
+            "CAPTAIN DON'T LET THE ENEMY WAIT, WHAT IS YOUR MOVE?",
+            "CAPTAIN THE ENEMY IS MOCKING US, GIVE HIM A LESSON, WHAT ARE YOUR COORDONATES?",
+        };
+
+        slowType(askMoveMessages[generateRandomInt(0, askMoveMessages.length - 1)]);
+        System.out.println();
+    }
+
+
+    /**
+     * creates a empty matrix of lines lines, and colls collumns
+     * @param lines the matrix's lines
+     * @param colls the matrix's collumns
+     * @return a 0 filled matrix of type integer
+     */
+    public static List<List<Integer>> createEmptyMatrix(int lines, int colls) {
+        // manually create empty matrix
+        List<List<Integer>> matrix = new ArrayList<>();
+        for(int i = 0; i < lines; i++) {
+            matrix.add(
+                createEmptyList(colls)
+            );
+            
+        }
+
+        return matrix;
+    }
+
+    /**
+     * creates a list of 0s
+     * @param size is the size, duh
+     * @return the list of type integer filled with 0s, duh, you brainded
+     */
+    public static List<Integer> createEmptyList(int size) {
+        // manually create empty list, duh
+        List<Integer> list = new ArrayList<>();
+        for(int i = 0; i < size; i++) {
+            list.add(0);
+        }
+
+        return list;
     }
 }
