@@ -98,6 +98,8 @@ class GameRunner {
      */
     public static HumanPlayer guest = new HumanPlayer();
 
+    AlgorithmicBot testBot = new AlgorithmicBot();
+
 
     /**
      * Game loop runs here
@@ -206,7 +208,7 @@ class GameRunner {
 
                 case "2":
                     // algorithmic bot
-                    Helpers.slowType("CAPTAIN THIS FEATURE ISN'T OUT YET");
+                    MatchLoader.loadPVEMatch(captain, BotType.AlgorithmicBot);
                     break;
 
                 case "3":
@@ -260,19 +262,37 @@ class MatchLoader {
                 break;
 
             case AlgorithmicBot:
-
+                bot = new AlgorithmicBot();
                 break;
         }
 
 
         while (playing) {
-            GameModes gameMode = chooseRandomBot_Type();
+            GameModes gameMode = GameModes.BotEasy;
+
+            switch (botType) {
+                case RandomBot:
+                    gameMode = chooseRandomBot_Type();
+                    break;
+
+                case AlgorithmicBot:
+                    gameMode = chooseAlgorithmicBot_Type();
+                    break;
+            
+                default:
+                    break;
+            }
+
+
+            if (gameMode == GameModes.Back) {
+                return;
+            }
 
             bot.changeBotGameMode(gameMode);
 
             GameSettings.sniperMode = gameMode == GameModes.Sniper;
 
-            ScreenManager.printScore(captain.score, bot.score, captain.playerName, bot.playerName, "o");
+            ScreenManager.printScore(captain.score, bot.score, captain.playerName, bot.playerName, captain.getShipCount(), bot.getShipCount(), "o");
 
             // play a game
             gameFinishedWell = playRound(captain, bot);
@@ -294,7 +314,7 @@ class MatchLoader {
      * @param player2
      * @return returns wether the game finished normally, now it's boolean, could be expanded in future
      */
-    private static boolean playRound(Player player1, Player player2) {
+    public static boolean playRound(Player player1, Player player2) {
 
         player1.prepareForRound();
         player2.prepareForRound();
@@ -334,6 +354,7 @@ class MatchLoader {
                         // go to main menu
                         // say last guy to move is a looser
                         Helpers.slowType(player1.playerName + " is a looser");
+                        Helpers.sleep(500);
                         return false;
 
                     case PassTurn:
@@ -364,6 +385,7 @@ class MatchLoader {
                         // go to main menu
                         // say last guy to move is a looser
                         Helpers.slowType(player2.playerName + " is a looser");
+                        Helpers.sleep(500);
                         return false;
 
                     case PassTurn:
@@ -426,7 +448,41 @@ class MatchLoader {
 
                 case "0":
                 case "e":
-                    return null;
+                    return GameModes.Back;
+            
+                default:
+                    Helpers.printInvalidInputMessage();
+                    break;
+            }
+
+        }
+    }
+
+    /**
+     * choses a algorithmic's bot valid game type
+     * @return returns a gamemode which sets parameters for bot
+     */
+    private static GameModes chooseAlgorithmicBot_Type() {
+        String consoleInput;
+
+        while (true) {
+            ScreenManager.chooseGameModeForAlgorithmicBot();
+            
+            consoleInput = InputManager.getLetter();
+
+            switch (consoleInput.toLowerCase()) {
+                case "1":
+                    return GameModes.BotEasy;
+
+                case "2":
+                    return GameModes.BotMedium;
+
+                case "3":
+                    return GameModes.Sniper;
+
+                case "0":
+                case "e":
+                    return GameModes.Back;
             
                 default:
                     Helpers.printInvalidInputMessage();
@@ -449,7 +505,7 @@ class MatchLoader {
         Helpers.sleep(1000);
         Helpers.slowType(player2.playerName + "'S GRID");
         player2.printGrid();
-        ScreenManager.printScore(player1.score, player2.score, player1.playerName, player2.playerName, "o");
+        ScreenManager.printScore(player1.score, player2.score, player1.playerName, player2.playerName, player1.getShipCount(), player2.getShipCount(), "o");
         
         Helpers.sleep(5000);
         Helpers.slowType("GAME OVER.");
@@ -1063,6 +1119,20 @@ abstract class Player {
         }
         return biggestShip;
     }
+    /**
+     * returns the size of the largest ship from boardObjects
+     * @param boardObjects the list we're searching the largest ship in
+     * @return the size of the largest ship
+     */
+    public int getLargestShipFromObjects(List<BoardObject> boardObjects) {
+        int biggestShip = 0;
+        for (BoardObject object : boardObjects) {
+            if (object instanceof Ship && !object.destroyed) {
+                biggestShip = Math.max(biggestShip, object.size);
+            }
+        }
+        return biggestShip;
+    }
 
 
     /**
@@ -1371,6 +1441,98 @@ abstract class Player {
         return true;
     }
 
+    /**
+     * @return the number of nondestroyed ships
+     */
+    public int getShipCount() {
+        int shipCount = 0;
+
+        for (BoardObject boardObject : boardObjects) {
+            if (boardObject instanceof Ship && !boardObject.destroyed) {
+                shipCount++;
+            }
+        }
+
+        return shipCount;
+    }
+
+    /**
+     * prints the ships to place vertically, so it is easier to understand for the player, also it is more cool ngl <br>
+     * accepts a copy of default ships cuz it modifies it
+     * @param shipsToPlace a list of ships required to be placed
+     * @param centerSpace stuff to center shi
+     */    
+    public void printShipsVertically(List<ShipToPlace> shipsToPlace, String centerSpace) {
+        // gaps, paddings verbliud
+        String shipGap = " ".repeat(2);
+
+
+
+        // this prints them vertically
+        // this prints each row
+        for (int i = 0; i < GameSettings.copyOfShips().get(shipsToPlace.size()-1).shipSize; i++) {
+            System.out.print(centerSpace);
+            
+            // for each ship 
+            for (int j = 0; j < shipsToPlace.size(); j++) {
+                System.out.print(shipGap);
+
+                if (j+1 == shipsToPlace.size()) {
+                    System.out.print(GameSettings.shipCharacter);
+                    shipsToPlace.get(j).decrementShipSize();
+                } else {
+                    if (shipsToPlace.get(j).shipSize == shipsToPlace.get(j+1).shipSize) {
+                        System.out.print(GameSettings.shipCharacter);
+                        shipsToPlace.get(j).decrementShipSize();
+                    } else {
+                        System.out.print(" ");
+                    }
+                }
+                System.out.print(shipGap);
+
+            }
+            System.out.println();
+        }
+
+        System.out.println();
+
+        System.out.print(centerSpace);
+        // print the quantity of each ship at the end of the line
+        for (int j = 0; j < shipsToPlace.size(); j++) {
+            System.out.print(shipGap + shipsToPlace.get(j).shipQuantity + shipGap);
+        }
+
+        System.out.println();
+    }
+
+    /**
+     * a simpler variant of the function for wider use
+     */
+    public void printShipsVertically() {
+        printShipsVertically(formatBoardObjectsAsShipToPlace(), " ".repeat(20));
+    }
+
+    /**
+     * ... <br>
+     * lets say that it just subtracts the destroyed ships
+     * @return
+     */
+    private List<ShipToPlace> formatBoardObjectsAsShipToPlace() {
+        List<ShipToPlace> shipsToPlace = GameSettings.copyOfShips();
+
+        for (BoardObject boardObject : boardObjects) {
+            if (boardObject instanceof Ship) {
+                for (int i = 0; i < shipsToPlace.size(); i++) {
+                    if (shipsToPlace.get(i).shipSize == boardObject.size && boardObject.destroyed) {
+                        shipsToPlace.set(i, new ShipToPlace(shipsToPlace.get(i).shipSize, shipsToPlace.get(i).shipQuantity-1));
+                    }
+                }
+            }
+        }
+
+        return shipsToPlace;
+    }
+
 }
 
 class HumanPlayer extends Player {
@@ -1408,11 +1570,11 @@ class HumanPlayer extends Player {
             return TurnResult.Win;
         }
 
-        ScreenManager.printScore(getHitCount(), enemy.getHitCount(), playerName, enemy.playerName, "h");
+        ScreenManager.printScore(getHitCount(), enemy.getHitCount(), playerName, enemy.playerName, getShipCount(), enemy.getShipCount(), "h");
 
         System.out.println();
         Helpers.slowType("YOU CAN ALSO: ");
-        System.out.println("\n[G] - give up\n[Q] - quit game (rage quit, bot does not gain points, return to main menu)");
+        System.out.println("\n[G] - give up\n[Q] - quit game (rage quit, bot does not gain points, return to main menu)\n[S] - see enemies remaining ships");
         System.out.println("\n");   // 2 smart and efficient newlines
 
         Helpers.slowType("CAPTAIN!");
@@ -1430,8 +1592,15 @@ class HumanPlayer extends Player {
             consoleInput = InputManager.getNextLine();
             
             if (consoleInput.equalsIgnoreCase("g")) {
-                enemy.incrementScore();
                 return TurnResult.GaveUp;
+
+            } else if (consoleInput.equalsIgnoreCase("s")) {
+
+                Helpers.slowType("CAPTAIN!, OUR SOURCES ARE REPORTING THESE SHIPS ARE REMAINING AMONG ENEMY LINES");
+                
+                enemy.printShipsVertically();
+                
+                System.out.println('\n');  // another 2 extreamely efficient lines
 
             } else if (consoleInput.equalsIgnoreCase("q")) {
                 Helpers.sleep(1000);
@@ -1485,7 +1654,12 @@ class HumanPlayer extends Player {
             } else {
                 ScreenManager.printShipDestroyedMessage();
                 Helpers.sleep(1000);
-                Helpers.slowType("DO NOT OPEN SHAMPAGNE YET, ENEMY STIL HAS SHIPS OUT THERE");
+                if (enemy.getShipCount() == 0) {
+                    Helpers.slowType(Colors.RED + "ALL ENEMY SHIPS DESTROYED!" + Colors.RESET, 80);
+                } else {
+                    Helpers.slowType("DO NOT OPEN SHAMPAGNE YET, ENEMY STIL HAS SHIPS OUT THERE");
+                }
+
                 System.out.println();
                 Helpers.sleep(500);
 
@@ -1965,54 +2139,6 @@ class HumanPlayer extends Player {
 
 
     /**
-     * prints the ships to place vertically, so it is easier to understand for the player, also it is more cool ngl <br>
-     * accepts a copy of default ships cuz it modifies it
-     * @param shipsToPlace a list of ships required to be placed
-     * @param centerSpace stuff to center shi
-     */    
-    public void printShipsVertically(List<ShipToPlace> shipsToPlace, String centerSpace) {
-        // gaps, paddings verbliud
-        String shipGap = " ".repeat(2);
-
-
-
-        // this prints each row
-        for (int i = 0; i < GameSettings.copyOfShips().get(shipsToPlace.size()-1).shipSize; i++) {
-            System.out.print(centerSpace);
-            
-            // for each ship 
-            for (int j = 0; j < shipsToPlace.size(); j++) {
-                System.out.print(shipGap);
-
-                if (j+1 == shipsToPlace.size()) {
-                    System.out.print(GameSettings.shipCharacter);
-                    shipsToPlace.get(j).decrementShipSize();
-                } else {
-                    if (shipsToPlace.get(j).shipSize == shipsToPlace.get(j+1).shipSize) {
-                        System.out.print(GameSettings.shipCharacter);
-                        shipsToPlace.get(j).decrementShipSize();
-                    } else {
-                        System.out.print(" ");
-                    }
-                }
-                System.out.print(shipGap);
-
-            }
-            System.out.println();
-        }
-
-        System.out.println();
-
-        System.out.print(centerSpace);
-        // print the quantity of each ship at the end of the line
-        for (int j = 0; j < shipsToPlace.size(); j++) {
-            System.out.print(shipGap + shipsToPlace.get(j).shipQuantity + shipGap);
-        }
-
-        System.out.println();
-    }
-
-    /**
      * in generate ships automatically if user inputs a invalid input, we just generate a new map and say fuck you kinda
      */
     public void printMockingMessageOnAIGridNotLiked() {
@@ -2192,6 +2318,9 @@ class RandomBot extends Bot {
                     if (shipDestroyed(randomValidMove.x(), randomValidMove.y(), enemy.grid, Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize))) {
                         // mark ship as destroyed
                         markShipAsDestroyed(randomValidMove, enemy.grid, enemy.boardObjects);
+
+                        Helpers.slowType("CAPTAIN! ", false);
+                        Helpers.slowType("WE HEAR REPORTS OF A SHIP SINKING");
                     }
 
                     incrementHitCount();
@@ -2212,13 +2341,541 @@ class RandomBot extends Bot {
     }
 }
 
+class AlgorithmicBot extends Bot {
+    /* 
+     here we call matrix stuff related to 'Ai'-ish stuff, for calculating moves etc
+    */
+
+    // scores
+    // some might call these magic numbers which they are
+    double possibleShipPositionBuff = 1.5;
+    double closenessToCenterMultiplier = 0.8; 
+    double cellAroundHitBuff = 10.5;
+    double guaranteedPossibleShipBuff = 15.5;
+
+    private boolean firstMoveThisMatch = true;
+
+    /**
+     * in AlgorithmicBot context it will either be hit, or passturn <br> 
+     * to let the bot know if we are hunting a ship or devouring one
+     */
+    TurnResult lastTurnResult = TurnResult.PassTurn;
+
+    /**
+     * a integer matrix of board size <br>
+     * it has either a -1 value, meaning the move is invalid, -2 meaning there is a hit <br>
+     * or a positive integer value, how likely it is that a ship is there
+     */
+    List<List<Double>> bestMoveMatrix = new ArrayList<>();
+
+    AlgorithmicBot() {
+        lastTurnResult = TurnResult.PassTurn;
+        // set name to something like a normal name
+        // nope set it to shit, though it's done in parent
+    }
+
+    /**
+     * prepares bot for round, clears grids and other stuff
+     */
+    @Override
+    public void prepareForRound() {
+        resetGrid();
+
+        Helpers.printMessageAndThreeDotsSlowly("CONFIGURING BOT");
+
+        Helpers.sleep(200);
+
+        generateShipsPositions();
+
+        Helpers.sleep(200);
+
+        System.out.println("BOT READY!");
+
+        hitCount = 0;
+
+        firstMoveThisMatch = true;
+
+        Helpers.sleep(400);
+    }
+
+
+    /**
+     * is the function where this bad boy glues toghether some shitty math, and does something to penetrate you in the end
+     */
+    @Override
+    public TurnResult makeTurn(Player enemy) {
+        Helpers.sleep(500);
+        Helpers.slowType(playerName + "'S TURN");
+        Helpers.sleep(500);
+
+        Coordonates bestMoveChosen = new Coordonates(0, 0);
+
+
+        // for number of moves of bot
+        for (int i = moveCount; i > 0; i--) {
+            enemy.computeGrid();
+            // if won
+            if (enemy.hasLost()) {
+                enemy.printGrid();
+
+                // increment bot score acording to gameMode
+                incrementScore();
+                
+                Helpers.slowType("CAPTAIN", false);
+                Helpers.sleep(500);
+                Helpers.slowType(", WE'RE RECIEVING A MESSAGE FROM THE ENEMY HEADSHIP!");
+
+                Helpers.sleep(100);
+
+                Helpers.slowType("WE'RE DESCHIPERING THE MESSAGE...");
+
+                Helpers.sleep(Helpers.generateRandomInt(1000, 2000));
+
+                System.out.println();
+                Helpers.slowType("GG", 750);
+                System.out.println();
+
+                Helpers.sleep(2000);
+
+                return TurnResult.Win;
+            }
+
+            if (moveCount > 1) {
+                Helpers.slowType(playerName + " HAS " + i + " MOVES TO MAKE");
+            }
+
+
+            // do da calculate best move & search random best position thing
+            
+            // initialize the bestmove matrix
+            computeInitialValidMovesMatrix(enemy);
+
+            // make the center moves more sexy
+            fillMatrixCenterAlgorithm();
+            
+            // compute biggest ship possible positions
+            if (firstMoveThisMatch) {
+                firstMoveThisMatch = false;
+            } else {
+                computeLargestShipPossiblePositions(enemy);
+
+                calibrateHits();
+            }
+
+            // then search for best move
+            bestMoveChosen = selectBestMove();
+            
+            ScreenManager.printBotRandomMoveMessage(this.playerName);
+
+            Helpers.slowType(this.playerName + " HAS THOUGHT");
+            Helpers.sleep(500);
+            Helpers.slowType("NOW HE WILL HIT THE SPOT");
+            Helpers.sleep(500);
+
+            Helpers.slowType(this.playerName + " CHOSE " + bestMoveChosen.toString() + " AS HIS MOVE");
+            
+            ScreenManager.printDramaticPauseBeforeMove(this.playerName);
+
+            // if hit do not increment i, set last turn to hit
+            if (enemy.grid.get(bestMoveChosen.y()).get(bestMoveChosen.x()).equals(GameSettings.shipCharacter)) {
+                ScreenManager.printBotHit(this.playerName);
+                enemy.registerHit(new Hit(new Coordonates(bestMoveChosen.x(), bestMoveChosen.y())));
+
+                enemy.computeGrid();
+
+                // check ship destroyed
+                if (shipDestroyed(bestMoveChosen.x(), bestMoveChosen.y(), enemy.grid, Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize))) {
+                    // mark ship as destroyed
+                    markShipAsDestroyed(bestMoveChosen, enemy.grid, enemy.boardObjects);
+
+                    Helpers.slowType("CAPTAIN! ", false);
+                    Helpers.slowType("WE HEAR REPORTS OF A SHIP SINKING");
+                }
+
+                incrementHitCount();
+
+
+                // do not increment i
+                i--;
+                lastTurnResult = TurnResult.Hit;
+
+            } else if (enemy.grid.get(bestMoveChosen.y()).get(bestMoveChosen.x()).equals(GameSettings.waterCharacter)) {
+                ScreenManager.printBotMiss(this.playerName);
+                enemy.registerMiss(new Miss(new Coordonates(bestMoveChosen.x(), bestMoveChosen.y())));
+
+                lastTurnResult = TurnResult.PassTurn;
+            }
+            enemy.computeGrid();
+            
+
+            Helpers.slowType("OUR GRID AFTER THE FEROCIOUS ATTACK OF " + playerName);
+            enemy.printGrid();
+            Helpers.sleep(1000);
+        }
+
+        return lastTurnResult;
+    }
+
+    /**
+     * different from the Bot.computeValidMoves, this returns a matrix of valid moves <br>
+     * initial fill of bestMove matrix
+     * initializes the main matrix a matrix where 0 is a valid move, and -1 is a invalid one -2 is a hit
+     */
+    private void computeInitialValidMovesMatrix(Player enemy) {
+        double currentPositionValid = 0;
+
+        bestMoveMatrix.clear();
+        bestMoveMatrix = new ArrayList<>();
+
+        for (int i = 0; i < enemy.grid.size(); i++) {
+            bestMoveMatrix.add(new ArrayList<>());
+            for (int j = 0; j < enemy.grid.size(); j++) {
+
+                if (validTurn(new Coordonates(j, i), enemy)) {
+                    currentPositionValid = 0;
+                } else if (enemy.grid.get(i).get(j).equals(GameSettings.hitCharacter)) {
+                    currentPositionValid = -2;
+                } else {
+                    currentPositionValid = -1;
+                }
+                bestMoveMatrix.get(i).add(currentPositionValid);
+            }
+        }
+    }
+
+    /**
+     * takes the largest ship, and adds 1 to every it's possible position
+     * @param enemy
+     */
+    private void computeLargestShipPossiblePositions(Player enemy) {
+
+        int largestShipSize = getLargestShipFromObjects(enemy.boardObjects);
+
+        for (int y = 0; y < bestMoveMatrix.size(); y++) {
+            for (int x = 0; x < bestMoveMatrix.size(); x++) {
+                // check if ship fits at curr xy vertically
+                if (shipPositionValid(x, y, largestShipSize, 1, bestMoveMatrix)) {
+                    fillMatrixWithPossibleShipBuffInDirection(x, y, largestShipSize, 1);
+                } 
+                // check if ship fits at curr xy horizontally
+                if (shipPositionValid(x, y, largestShipSize, 2, bestMoveMatrix)) {
+                    fillMatrixWithPossibleShipBuffInDirection(x, y, largestShipSize, 2);
+                }
+            }
+        }
+    }
+
+    /**
+     * checks if the ship can fit on xy for size cells in directionCheck direction
+     * @param x
+     * @param y
+     * @param shipSize how many cells we check for
+     * @param directionCheck 1 for verticall check down, 2 for horizontal check right
+     * @param knownIntegerGrid a integer grid where -1 means a invalid move/shipPosition
+     * @return
+     */
+    private boolean shipPositionValid(int x, int y, int shipSize, int directionCheck, List<List<Double>> knownIntegerGrid) {
+        // we've worked everything until now, no need to do anything else
+        // the base case for our recursive function
+        if (shipSize == 0) {
+            return true;
+        }
+
+        // check current cell
+        if (
+            x < 0 || x > GameSettings.gridSize-1 || y < 0 || y > GameSettings.gridSize-1 ||
+            knownIntegerGrid.get(y).get(x) == -2 || knownIntegerGrid.get(y).get(x) == -1
+        ) {
+            return false;
+        }
+
+        // direct neighbors check
+        if (
+            y > 0 && 
+            knownIntegerGrid.get(y-1).get(x) == -2
+        ) {
+            return false;
+        }
+        if (
+            x < GameSettings.gridSize-1 && 
+            knownIntegerGrid.get(y).get(x+1) == -2
+        ) {
+            return false;
+        }
+        if (
+            y < GameSettings.gridSize-1 && 
+            knownIntegerGrid.get(y+1).get(x) == -2
+        ) {
+            return false;
+        }
+        if (
+            x > 0 && 
+            knownIntegerGrid.get(y).get(x-1) == -2
+        ) {
+            return false;
+        }
+
+        // diagonal check
+        if (
+            y > 0 && x > 0 && 
+            knownIntegerGrid.get(y-1).get(x-1) == -2
+        ) {
+            return false;
+        }
+        if (
+            y > 0 && x < GameSettings.gridSize-1 && 
+            knownIntegerGrid.get(y-1).get(x+1) == -2
+        ) {
+            return false;
+        }
+        if (
+            y < GameSettings.gridSize-1 && x > 0 && 
+            knownIntegerGrid.get(y+1).get(x-1) == -2
+        ) {
+            return false;
+        }
+        if (
+            y < GameSettings.gridSize-1 && x < GameSettings.gridSize-1 && 
+            knownIntegerGrid.get(y+1).get(x+1) == -2
+        ) {
+            return false;
+        }
+
+        // shoot a ray for the rest of ship's size
+        if (directionCheck == 1) {
+            return shipPositionValid(x, y+1, shipSize-1, directionCheck, knownIntegerGrid);
+        } else if (directionCheck == 2) {
+            return shipPositionValid(x+1, y, shipSize-1, directionCheck, knownIntegerGrid);
+        } else {
+            System.out.println("[ERROR] we've somehow got other direction in AlgorithmicBot.shipPositionValid function");
+            // though thats kinda impossible
+            return false;
+        }
+    }
+
+    /**
+     * takes valid xy coordonate and size and direction of a ship that will 100% fit there <br>
+     * and just increments bot's bestMove matrix
+     * @param x
+     * @param y
+     * @param shipSize
+     * @param direction
+     */
+    private void fillMatrixWithPossibleShipBuffInDirection(int x, int y, int shipSize, int direction) {
+        // we've worked everything until now, no need to do anything else
+        // the base case for our recursive function
+        if (shipSize == 0) return;
+
+        // increment current coordonate
+        bestMoveMatrix.get(y).set(x, bestMoveMatrix.get(y).get(x) + possibleShipPositionBuff);
+
+        // shoot a ray for the rest of ship's size
+        if (direction == 1) {
+            fillMatrixWithPossibleShipBuffInDirection(x, y+1, shipSize-1, direction);
+        } else if (direction == 2) {
+            fillMatrixWithPossibleShipBuffInDirection(x+1, y, shipSize-1, direction);
+        }
+    }
+
+    /**
+     * makes a palindromic line matrix first, with values closer to middle bigger <br>
+     * then adds it to our main matrix vertically and horizontally
+     */
+    private void fillMatrixCenterAlgorithm() {
+        // make the palindromic line matrix that should center the choices of the algorithm
+        // we get the size from the bestMoveMatrix, rather than settings
+        // so if the shit hits the fan we know where to start from
+
+        List<Double> palindromicLineMatrix = new ArrayList<>();
+        int lineMatrixSize = bestMoveMatrix.size();
+        // int lineMatrixSize = GameSettings.gridSize;
+
+        // format a parindromic linematrix that will que algorithm's choice to center
+        for (int i = 0; i < lineMatrixSize; i++) {
+            if (lineMatrixSize % 2 == 0) {
+                if (i < lineMatrixSize/2) {
+                    palindromicLineMatrix.add(i * closenessToCenterMultiplier);
+                } else {
+                    palindromicLineMatrix.add(palindromicLineMatrix.get(lineMatrixSize-i-1));
+                }
+            } else {
+                if (i <= lineMatrixSize/2) {
+                    palindromicLineMatrix.add(i * closenessToCenterMultiplier);
+                } else {
+                    palindromicLineMatrix.add(palindromicLineMatrix.get(lineMatrixSize-i-1));
+                }
+            }
+        }
+
+        // aggresively do the nerd math shit
+        // we add vertically and horizontally theeeeeeeee im tired of writing, this makes center shit cells big numbers
+        for (int y = 0; y < bestMoveMatrix.size(); y++) {
+            for (int x = 0; x < bestMoveMatrix.size(); x++) {
+                // we only increment if the move is valid
+                if (bestMoveMatrix.get(y).get(x) >= 0) {
+                    bestMoveMatrix.get(y).set(
+                        x, bestMoveMatrix.get(y).get(x) + palindromicLineMatrix.get(x) + palindromicLineMatrix.get(y)
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * this one should increment the ends if there are 2 hits in a row
+     */
+    private void calibrateHits() {
+        for (int i = 0; i < bestMoveMatrix.size(); i++) {
+            for (int j = 0; j < bestMoveMatrix.size(); j++) {
+                // increment cells around hit, if they are valid
+                if (bestMoveMatrix.get(i).get(j) == -2) {
+                    if (j > 0) {
+                        if (bestMoveMatrix.get(i).get(j-1) >= 0) {
+                            bestMoveMatrix.get(i).set(j-1, bestMoveMatrix.get(i).get(j-1) + cellAroundHitBuff);
+                        }
+                    }
+                    if (j < GameSettings.gridSize-1) {
+                        if (bestMoveMatrix.get(i).get(j+1) >= 0) {
+                            bestMoveMatrix.get(i).set(j+1, bestMoveMatrix.get(i).get(j+1) + cellAroundHitBuff);
+                        }
+                    }
+                    if (i > 0) {
+                        if (bestMoveMatrix.get(i-1).get(j) >= 0) {
+                            bestMoveMatrix.get(i-1).set(j, bestMoveMatrix.get(i-1).get(j) + cellAroundHitBuff);
+                        }
+                    }
+                    if (i < GameSettings.gridSize-1) {
+                        if (bestMoveMatrix.get(i+1).get(j) >= 0) {
+                            bestMoveMatrix.get(i+1).set(j, bestMoveMatrix.get(i+1).get(j) + cellAroundHitBuff);
+                        }
+                    }
+                }
+
+                // increment cells around consecutive hits
+                if (bestMoveMatrix.get(i).get(j) == -2) {
+                    // if below is a hit
+                    if (i < GameSettings.gridSize-1 && bestMoveMatrix.get(i+1).get(j) == -2) {
+                        // if there is a below below
+                        if (i < GameSettings.gridSize-2 && bestMoveMatrix.get(i+2).get(j) >= 0) {
+                            bestMoveMatrix.get(i+2).set(j, bestMoveMatrix.get(i+2).get(j) + guaranteedPossibleShipBuff);
+                        }
+                        // if there is a above
+                        if (i > 0 && bestMoveMatrix.get(i-1).get(j) >= 0) {
+                            bestMoveMatrix.get(i-1).set(j, bestMoveMatrix.get(i-1).get(j) + guaranteedPossibleShipBuff);
+                        }
+                    }
+                    // if above is a hit
+                    if (i > 0 && bestMoveMatrix.get(i-1).get(j) == -2) {
+                        // if there is a above above
+                        if (i > 1 && bestMoveMatrix.get(i-2).get(j) >= 0) {
+                            bestMoveMatrix.get(i-2).set(j, bestMoveMatrix.get(i-2).get(j) + guaranteedPossibleShipBuff);
+                        }
+                        // if there is a below
+                        if (i < GameSettings.gridSize-1 && bestMoveMatrix.get(i+1).get(j) >= 0) {
+                            bestMoveMatrix.get(i+1).set(j, bestMoveMatrix.get(i+1).get(j) + guaranteedPossibleShipBuff);
+                        }
+                    }
+                    // if left is a hit
+                    if (j > 0 && bestMoveMatrix.get(i).get(j-1) == -2) {
+                        // if there is a left left
+                        if (j > 1 && bestMoveMatrix.get(i).get(j-2) >= 0) {
+                            bestMoveMatrix.get(i).set(j-2, bestMoveMatrix.get(i).get(j-2) + guaranteedPossibleShipBuff);
+                        }
+                        // if there is a right
+                        if (j < GameSettings.gridSize-1 && bestMoveMatrix.get(i).get(j+1) >= 0) {
+                            bestMoveMatrix.get(i).set(j+1, bestMoveMatrix.get(i).get(j+1) + guaranteedPossibleShipBuff);
+                        }
+                    }
+                    // if right is a hit
+                    if (j < GameSettings.gridSize-1 && bestMoveMatrix.get(i).get(j+1) == -2) {
+                        // if there is a right right
+                        if (j < GameSettings.gridSize-2 && bestMoveMatrix.get(i).get(j+2) >= 0) {
+                            bestMoveMatrix.get(i).set(j+2, bestMoveMatrix.get(i).get(j+2) + guaranteedPossibleShipBuff);
+                        }
+                        // if there is a left
+                        if (j > 0 && bestMoveMatrix.get(i).get(j+-1) >= 0) {
+                            bestMoveMatrix.get(i).set(j-1, bestMoveMatrix.get(i).get(j-1) + guaranteedPossibleShipBuff);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * gets the max value from bestMovesMatrix <br>
+     * select all coords of that value, if there are more randomly selects one
+     * @return a valid best move in this situation
+     */
+    private Coordonates selectBestMove() {
+        double max = -1;
+        // first get max
+        for (int i = 0; i < bestMoveMatrix.size(); i++) {
+            for (int j = 0; j < bestMoveMatrix.size(); j++) {
+                max = Math.max(max, bestMoveMatrix.get(i).get(j));
+            }
+        }
+
+        // in case we have multiple best moves 
+        List<Coordonates> bestMoves = new ArrayList<>();
+
+        for (int i = 0; i < bestMoveMatrix.size(); i++) {
+            for (int j = 0; j < bestMoveMatrix.size(); j++) {
+                if (bestMoveMatrix.get(i).get(j) == max) {
+                    bestMoves.add(new Coordonates(j, i));
+                }
+            }
+        }
+
+        return bestMoves.get(Helpers.generateRandomInt(0, bestMoves.size()-1));
+    }
+
+    /**
+     * changes bot's gamemode <br>
+     * for now it only changes the turns its allowed to make
+     * @param gameMode the game mode we're discussing
+     */
+    @Override
+    public void changeBotGameMode(GameModes gameMode) {
+        switch (gameMode) {
+            case BotEasy:
+                moveCount = 1;
+                scoreIncrement = 1;
+                break;
+            
+            case BotMedium:
+                moveCount = 2;
+                scoreIncrement = 1;
+                break;
+
+            case Sniper:
+                moveCount = 1;
+                scoreIncrement = 1;
+                break;
+        
+            default:
+                break;
+        }
+    }
+
+
+    private void printLocalMatrix() {
+        for (int i = 0; i < bestMoveMatrix.size(); i++) {
+            for (int j = 0; j < bestMoveMatrix.size(); j++) {
+                System.out.print(" " + bestMoveMatrix.get(i).get(j) + " ");
+            }
+            System.out.println();
+        }
+    }
+
+}
 
 // enums 
 enum GameType {
     Cancel, RandomBot, LocalPvP
 }
 enum GameModes {
-    BotEasy, BotMedium, BotHard, Sniper,
+    BotEasy, BotMedium, BotHard, Sniper, Back
 }
 enum AddShipResult {
     ShipAdded, DeleteLastShip, Cancel, Clear
@@ -2228,6 +2885,9 @@ enum BotType {
 }
 enum TurnResult {
     Win, GaveUp, RageQuited, PassTurn, Hit
+}
+enum BotAction {
+    SearchShip, HitShipTop, HitShipBottom, HitShipLeft, HitShipRight
 }
 
 
@@ -2270,7 +2930,7 @@ class GameSettings {
     /**
      * the current grid size we play with
      */
-    public static int gridSize = 5;
+    public static int gridSize = 7;
 
     // paddings
     private static int STD_SPACE_COUNT = 4;
@@ -3089,6 +3749,45 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         System.out.println(STD_LINE);
     }
 
+    public static void chooseGameModeForAlgorithmicBot() {
+
+        clearConsole();
+        System.out.print(borderTopBegin);
+        System.out.println(STD_LINE);
+
+        System.out.println(borderVerticalLine + STD_SMALL_LINE);
+        
+        System.out.println(MENU_LINE_START + STD_SPACE + "WHAT GAME MODE WE PLAYIN' CAPTAIN?");
+        
+        System.out.println(borderVerticalLine + STD_SMALL_LINE);
+        
+        System.out.println(MENU_LINE_START);
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[1] BOT MEDIUM");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(bot makes a move per your move)");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[2] BOT HARD");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(bot makes 2 moves per your move)");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[3] SNIPER DUEL");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(you and bot have only 1, 1 tiled ship, the first who hits wins!)");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[0] BACK");
+        
+        System.out.print(borderBottomBegin);
+        System.out.println(STD_LINE);
+    }
+
     public static void placingShipsMenu() {
         System.out.println(STD_LINE);
         System.out.println(STD_SPACE);
@@ -3131,13 +3830,13 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
      * @param player2Name
      * @param mode the mode takes either o or h for overall or hits
      */
-    public static void printScore(int player1Score, int player2Score, String player1Name, String player2Name, String mode) {
+    public static void printScore(int player1Score, int player2Score, String player1Name, String player2Name, int player1ShipCount, int player2ShipCount, String mode) {
         String horizontalPadding = " ".repeat(2);
 
         
         String centeredText = mode.equals("o") ? GameSettings.GAME_NAME : "HITS SCOREBOARD";
 
-        String scoreDescription = mode.equals("o") ? "POINTS" : "HITS";
+        String scoreDescription = mode.equals("o") ? "POINTS" : "HITS  ";
 
         // calculate the width of the score board
         int scoreBoardWidth = 0;
@@ -3174,6 +3873,23 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
             horizontalPadding + "│" + horizontalPadding +
             "[ " + player2Name + " ]" + horizontalPadding + 
             player2Score + horizontalPadding + scoreDescription +
+            horizontalPadding
+        );
+
+        if (borderOdd) {
+            System.out.print(" ");
+        }
+
+        System.out.println(borderVerticalLine);
+
+
+        System.out.print(
+            borderVerticalLine + horizontalPadding + 
+            "[ " + player1Name + " ]" + horizontalPadding + 
+            player1ShipCount + horizontalPadding + "SHIPS " + 
+            horizontalPadding + "│" + horizontalPadding +
+            "[ " + player2Name + " ]" + horizontalPadding + 
+            player2ShipCount + horizontalPadding + "SHIPS " +
             horizontalPadding
         );
 
@@ -3277,6 +3993,8 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
             botName + " IS HIM!",
             botName + " IS ACTUALLY A SNIPER UNDERCOVER!",
             "CAPTAIN I THINK YOU NEED SOME LESSONS FROM " + botName + ", CUZ HIT RIGHT IN THE SPOT!",
+            botName + " ACTUALLY THINKS!",
+            "CAPTAIN I THINK YOU NEED SOME LESSONS FROM " + botName + ", CUZ HE ACTUALLY THINKS, UNLIKE YOU",
         };
 
         Helpers.slowType(botHitMessages[Helpers.generateRandomInt(0, botHitMessages.length-1)]);
@@ -3305,6 +4023,10 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
     }
 }
 
+
+/**
+ * small helping functions
+ */
 class Helpers {
     // a balance between speed and ambience
     // 70 for slow, 40 medium (default) 20 really fast
@@ -3415,6 +4137,7 @@ class Helpers {
      * @return returns a value between lowerBound and upperBound
      */
     public static int generateRandomInt(int lowerBound, int upperBound) {
+        if (lowerBound == upperBound) return lowerBound;
         // we add 1 to make the bound inclussive
         return ThreadLocalRandom.current().nextInt(lowerBound, upperBound+1);
     }
@@ -3443,6 +4166,9 @@ class Helpers {
         slowType(invalidInputMessages[generateRandomInt(0, invalidInputMessages.length - 1)]);
     }
 
+    /**
+     * prints a quick atmosferic asking move prompt
+     */
     public static void printRandomAskMove() {
         String[] askMoveMessages = {
             "CAPTAIN WE NEED TO HIT 'EM BEFORE THEY HIT US\nWHAT ARE YOUR COORDONATES?",
@@ -3490,4 +4216,18 @@ class Helpers {
 
         return list;
     }
+
+    /**
+     * prints a debug msg, shouldn't be used in production
+     * @param msg
+     */
+    public static void printDebugMessage(String msg) {
+        System.out.println("[DEBUG] " + msg);
+    }
+
 }
+
+
+// -----------------------------------------------------------------------------------------------------------
+// total lines
+// -----------------------------------------------------------------------------------------------------------
