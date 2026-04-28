@@ -212,15 +212,8 @@ class GameRunner {
                     break;
 
                 case "3":
-                    // ai stuff
-                    Helpers.slowType("CAPTAIN THIS FEATURE ISN'T OUT YET");
-                    break;
-
-                case "4":
                     // pvp stuff
-                    System.out.println("Run pvp");
-                    System.out.println("idk");
-                    System.out.println("PVP loop here");
+                    MatchLoader.loadPVPMatch(captain, guest);
                     break;
 
                 case "0":
@@ -244,7 +237,7 @@ class GameRunner {
 class MatchLoader {
 
     /**
-     * playes a neverending loop of player vs bot
+     * playes a neverending loop of player vs bot rounds
      * the main thing for pve
      * wanna run another type of bot? just call this with another bot type and thats it
      * @param captain the default player
@@ -305,6 +298,49 @@ class MatchLoader {
                 break;
             }
         }
+
+        clearPlayersData(captain, bot);
+    }
+    /**
+     * playes a neverending loop of player vs player rounds
+     * the main thing for pvp
+     * @param player1 a player (also is captain)
+     * @param player2 the second player (is guest)
+     */
+    public static void loadPVPMatch(HumanPlayer player1, HumanPlayer player2) {
+        boolean playing = true;
+        boolean gameFinishedWell = true;
+
+        while (playing) {
+            GameModes gameMode = GameModes.Vanila;
+
+            gameMode = choosePvPGameMode();
+
+            if (gameMode == GameModes.Back) {
+                return;
+            }
+
+            GameSettings.sniperMode = gameMode == GameModes.Sniper;
+
+            // set player game mode
+            player1.setPlayerGameMode(gameMode);
+            player2.setPlayerGameMode(gameMode);
+
+            ScreenManager.printScore(player1.score, player2.score, player1.playerName, player2.playerName, player1.getShipCount(), player2.getShipCount(), "o");
+
+            // play a game
+            gameFinishedWell = playRound(player1, player2);
+
+            // we quit if something went wrong (if someone ragequited)
+            if (!gameFinishedWell) break;
+
+            // players if they wanna have another round
+            if (!playAgain(player1.playerName)) break;
+            
+            if (!playAgain(player2.playerName)) break;
+        }
+
+        clearPlayersData(player1, player2);
     }
 
     /**
@@ -333,8 +369,10 @@ class MatchLoader {
             player1ToMove = true;
             player2ToMove = true;
 
+            printWarningPauseBetweenPlayerMoves(player2, player1);
+
+            // player1 move
             while (player1ToMove) {
-                // player1 move
                 turnResult = player1.makeTurn(player2);
 
                 // process player move result
@@ -366,8 +404,12 @@ class MatchLoader {
                 }
             }
 
+
+            printWarningPauseBetweenPlayerMoves(player1, player2);
+
+            
+            // player 2 move
             while (player2ToMove) {
-                // player 2 move
                 turnResult = player2.makeTurn(player1);
                 switch (turnResult) {
                     case Win:
@@ -419,6 +461,16 @@ class MatchLoader {
                 Helpers.printInvalidInputMessage();
             }
         }
+    }
+    /**
+     * calls the other function
+     * @param playerName is the player we're asking
+     * @return true if we play again false if not
+     */
+    private static boolean playAgain(String playerName) {
+        Helpers.slowType(playerName);
+
+        return playAgain();
     }
 
     /**
@@ -488,7 +540,39 @@ class MatchLoader {
                     Helpers.printInvalidInputMessage();
                     break;
             }
+        }
+    }
 
+    /**
+     * prompts player for pvp gamemode
+     * @return a valid GameMode for pvp
+     */
+    private static GameModes choosePvPGameMode() {
+        String consoleInput;
+
+        while (true) {
+            ScreenManager.choosePvPGameMode();
+            
+            consoleInput = InputManager.getLetter();
+
+            switch (consoleInput.toLowerCase()) {
+                case "1":
+                    return GameModes.Vanila;
+
+                case "2":
+                    return GameModes.TwoMoves;
+
+                case "3":
+                    return GameModes.Sniper;
+
+                case "0":
+                case "e":
+                    return GameModes.Back;
+            
+                default:
+                    Helpers.printInvalidInputMessage();
+                    break;
+            }
         }
     }
 
@@ -497,7 +581,7 @@ class MatchLoader {
      * @param player1 player1
      * @param player2 player2
      */
-    private static void printRoundEnd(Player player1, Player player2) {
+    public static void printRoundEnd(Player player1, Player player2) {
         Helpers.slowType("THE BATTLEFIELD IN THE END:");
         Helpers.sleep(500);
         Helpers.slowType(player1.playerName + "'S GRID");
@@ -508,11 +592,41 @@ class MatchLoader {
         ScreenManager.printScore(player1.score, player2.score, player1.playerName, player2.playerName, player1.getShipCount(), player2.getShipCount(), "o");
         
         Helpers.sleep(5000);
-        Helpers.slowType("GAME OVER.");
+        Helpers.slowType("GAME OVER ON ", false);
+        if (player1.hasLost()) {
+            Helpers.slowType(Colors.RED + player2.playerName + Colors.RESET + " WIN!");
+        } else {
+            Helpers.slowType(Colors.RED + player1.playerName + Colors.RESET + " WIN!");
+        }
         Helpers.sleep(2000);
     }
 
+    /**
+     * clears shit after a match, so in other match we don't need to reset
+     * @param player1
+     * @param player2
+     */
+    private static void clearPlayersData(Player player1, Player player2) {
+        player1.clearFields();
+        player2.clearFields();
+    }
 
+    /**
+     * prints a message and awaits input from player to move
+     * @param playerToCheck player whose move it was
+     * @param playerToMove player whose move it is now
+     */
+    private static void printWarningPauseBetweenPlayerMoves(Player playerToCheck, Player playerToMove) {
+        // we check if we play a pvp, we print a warning and wait for acording player
+        if (playerToCheck instanceof HumanPlayer && playerToMove instanceof HumanPlayer) {
+            Helpers.slowType(playerToCheck.playerName + " WE NEED TO MAKE SURE YOU GO AWAY FROM THE SCREEN!");
+            Helpers.slowType("IT'S " + playerToMove.playerName + " MOVE!!!");
+            Helpers.sleep(1000);
+
+            Helpers.slowType(playerToMove.playerName + " PLEASE CONFIRM IT'S YOU (press any button except turn off computer one)");
+            InputManager.getLetter();
+        }
+    }
 }
 
 
@@ -543,6 +657,8 @@ abstract class Player {
     protected int score = 0;
 
     protected int hitCount = 0;
+
+    protected int moveCount = 1;
 
 
     // grid related settings
@@ -1533,6 +1649,24 @@ abstract class Player {
         return shipsToPlace;
     }
 
+
+    public void clearFields() {
+        // reset fields and shi to default
+        score = 0;
+
+        hitCount = 0;
+
+        moveCount = 1;
+
+        boardObjects.clear();
+        boardObjects = new ArrayList<>();
+        
+        grid.clear();
+        grid = new ArrayList<>();
+
+        playerName = "CAPTAIN";
+    }
+
 }
 
 class HumanPlayer extends Player {
@@ -1556,130 +1690,175 @@ class HumanPlayer extends Player {
      */
     @Override
     public TurnResult makeTurn(Player enemy) {
-        Helpers.sleep(500);
-        Helpers.slowType(playerName + "'S TURN");
-        Helpers.sleep(500);
 
-        // checck win
-        enemy.computeGrid();
-        if (enemy.hasLost()) {
-            Helpers.slowType(enemy.playerName + "'S GRIND IN THE END:");
-            enemy.printGrid();
-            Helpers.printMessageAndThreeDotsSlowly(enemy.playerName + " LOST, AS EXPECTED");
-            incrementScore();
-            return TurnResult.Win;
-        }
-
-        ScreenManager.printScore(getHitCount(), enemy.getHitCount(), playerName, enemy.playerName, getShipCount(), enemy.getShipCount(), "h");
-
-        System.out.println();
-        Helpers.slowType("YOU CAN ALSO: ");
-        System.out.println("\n[G] - give up\n[Q] - quit game (rage quit, bot does not gain points, return to main menu)\n[S] - see enemies remaining ships");
-        System.out.println("\n");   // 2 smart and efficient newlines
-
-        Helpers.slowType("CAPTAIN!");
-        Helpers.sleep(800);
-        Helpers.slowType("THIS IS WHAT WE KNOW ABOUT ENEMY'S GRID:");
-        printHitList();
-
-        boolean askingMove = true;
-        String consoleInput = "";
-
-        // get player move first
-        while (askingMove) {
-            Helpers.printRandomAskMove();
-
-            consoleInput = InputManager.getNextLine();
-            
-            if (consoleInput.equalsIgnoreCase("g")) {
-                return TurnResult.GaveUp;
-
-            } else if (consoleInput.equalsIgnoreCase("s")) {
-
-                Helpers.slowType("CAPTAIN!, OUR SOURCES ARE REPORTING THESE SHIPS ARE REMAINING AMONG ENEMY LINES");
-                
-                enemy.printShipsVertically();
-                
-                System.out.println('\n');  // another 2 extreamely efficient lines
-
-            } else if (consoleInput.equalsIgnoreCase("q")) {
-                Helpers.sleep(1000);
-
-                Helpers.slowType("CAPTAIN AS A REMAINDER YOU LOST TO: " + enemy.playerName);
-                Helpers.sleep(500);
-
-                Helpers.slowType("LOOSER :))", 200);
-                Helpers.sleep(2000);
-                return TurnResult.RageQuited;
-
-            } else if (!validTurn(consoleInput, enemy)) {
-                Helpers.printInvalidInputMessage();
-            } else {
-                askingMove = false;
+        for (int i = moveCount; i > 0; i--) {
+            Helpers.sleep(500);
+            Helpers.slowType(playerName + "'S TURN");
+            if (moveCount > 1) {
+                Helpers.slowType(playerName + " HAS " + i + (i == 1 ? " MORE MOVE" : " MOVES") + " TO MAKE");
             }
-        }
-        
+            Helpers.sleep(500);
 
-        Coordonates turnCoordonates = new Coordonates(consoleInput);
-
-        ScreenManager.printDramaticPauseBeforeMove();
-
-        // miss
-        if (enemy.grid.get(turnCoordonates.y()).get(turnCoordonates.x()).equals(GameSettings.waterCharacter)) {
-            ScreenManager.printMissMessage();
-
-            enemy.registerMiss(new Miss(consoleInput));
-
-            hitList.add(new Miss(consoleInput));
-        }
-        // hit
-        else if (enemy.grid.get(turnCoordonates.y()).get(turnCoordonates.x()).equals(GameSettings.shipCharacter)) {
-            ScreenManager.printHitMessage();
-            Helpers.sleep(1000);
-
-            enemy.registerHit(new Hit(consoleInput));
-
+            // checck win
             enemy.computeGrid();
+            if (enemy.hasLost()) {
+                Helpers.slowType(enemy.playerName + "'S GRID IN THE END:");
+                enemy.printGrid();
+                Helpers.printMessageAndThreeDotsSlowly(enemy.playerName + " LOST, AS EXPECTED");
+                incrementScore();
+                return TurnResult.Win;
+            }
 
-            hitList.add(new Hit(consoleInput));
+            ScreenManager.printScore(getHitCount(), enemy.getHitCount(), playerName, enemy.playerName, getShipCount(), enemy.getShipCount(), "h");
+
+            promptPlayerProceed();
+
+            System.out.println();
+            Helpers.slowType("YOU CAN ALSO: ");
+            System.out.println("\n[G] - give up  |  [Q] - quit game (rage quit, the other guy does not gain points, return to main menu)\n[M] - see my map  |  [S] - see enemies remaining ships");
+            System.out.println("\n");   // 2 smart and efficient newlines
 
 
-            // say whether the ship is destroyed or not
-            List<List<Integer>> visited = Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize);
-            if (!shipDestroyed(turnCoordonates.x(), turnCoordonates.y(), enemy.grid, visited)) {
-                Helpers.slowType("CAPTAIN DO NOT RELAX SHIP NOT DESTROYED YET!");
-                Helpers.sleep(500);
-                System.out.println();
+            boolean askingMove = true;
+            String consoleInput = "";
 
-            } else {
-                ScreenManager.printShipDestroyedMessage();
+            // get player move first
+            while (askingMove) {
+                Helpers.slowType(playerName);
+                Helpers.sleep(800);
+                Helpers.slowType("THIS IS WHAT WE KNOW ABOUT ENEMY'S GRID:");
+                printHitList();
+
+
+                Helpers.printRandomAskMove();
+
+                consoleInput = InputManager.getNextLine();
+                
+                // give up option
+                if (consoleInput.equalsIgnoreCase("g")) {
+                    Helpers.slowType(playerName + " GAVE UP", 80);
+                    Helpers.sleep(1000);
+                    MatchLoader.printRoundEnd(enemy, this);
+                    return TurnResult.GaveUp;
+
+                } 
+                // quit option
+                else if (consoleInput.equalsIgnoreCase("q")) {
+                    Helpers.sleep(1000);
+
+                    Helpers.slowType(playerName + " AS A REMAINDER YOU LOST TO: " + enemy.playerName);
+                    Helpers.sleep(500);
+
+                    Helpers.slowType("LOOSER :))", 200);
+                    Helpers.sleep(2000);
+                    return TurnResult.RageQuited;
+
+                } 
+                // ships option
+                else if (consoleInput.equalsIgnoreCase("s")) {
+
+                    Helpers.slowType(playerName + "!, OUR SOURCES ARE REPORTING THESE SHIPS ARE REMAINING AMONG ENEMY LINES");
+                    
+                    enemy.printShipsVertically();
+                    
+                    System.out.println('\n');  // another 2 extreamely efficient lines
+
+                    promptPlayerProceed();
+
+                } 
+                // map option
+                else if (consoleInput.equalsIgnoreCase("m")) {
+                    Helpers.slowType("HERE IS OUR GRID MISTER " + playerName);
+                    printGrid();
+
+                    System.out.println('\n');   // i can smell efficiency in these newlines
+
+                    promptPlayerProceed();
+
+                } 
+                // invalid option
+                else if (!validTurn(consoleInput, enemy)) {
+                    Helpers.printInvalidInputMessage();
+                } 
+                // option is a coord
+                else {
+                    askingMove = false;
+                }
+            }
+            
+
+            // move shi
+            Coordonates turnCoordonates = new Coordonates(consoleInput);
+
+            ScreenManager.printDramaticPauseBeforeMove();
+
+            // miss
+            if (enemy.grid.get(turnCoordonates.y()).get(turnCoordonates.x()).equals(GameSettings.waterCharacter)) {
+                ScreenManager.printMissMessage();
+
+                promptPlayerProceed();
+
+                System.out.println('\n');   // yk the dril, efficient newlines
+
+                enemy.registerMiss(new Miss(consoleInput));
+
+                hitList.add(new Miss(consoleInput));
+            }
+            // hit
+            else if (enemy.grid.get(turnCoordonates.y()).get(turnCoordonates.x()).equals(GameSettings.shipCharacter)) {
+                ScreenManager.printHitMessage();
                 Helpers.sleep(1000);
-                if (enemy.getShipCount() == 0) {
-                    Helpers.slowType(Colors.RED + "ALL ENEMY SHIPS DESTROYED!" + Colors.RESET, 80);
+
+                System.out.println('\n');   // yk the dril, efficient newlines
+
+                enemy.registerHit(new Hit(consoleInput));
+
+                enemy.computeGrid();
+
+                hitList.add(new Hit(consoleInput));
+
+
+                // say whether the ship is destroyed or not
+                List<List<Integer>> visited = Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize);
+                if (!shipDestroyed(turnCoordonates.x(), turnCoordonates.y(), enemy.grid, visited)) {
+                    Helpers.slowType(playerName + " DO NOT RELAX SHIP NOT DESTROYED YET!");
+                    Helpers.sleep(500);
+                    System.out.println();
+
                 } else {
-                    Helpers.slowType("DO NOT OPEN SHAMPAGNE YET, ENEMY STIL HAS SHIPS OUT THERE");
+                    ScreenManager.printShipDestroyedMessage();
+                    Helpers.sleep(1000);
+                    // we havent calculated the enemy grid so we subtract one 
+                    if (enemy.getShipCount()-1 == 0) {
+                        Helpers.slowType(Colors.RED + "ALL ENEMY SHIPS DESTROYED!" + Colors.RESET, 80);
+                    } else {
+                        Helpers.slowType("DO NOT OPEN SHAMPAGNE YET, ENEMY STIL HAS SHIPS OUT THERE");
+                    }
+
+                    promptPlayerProceed();
+
+                    System.out.println();
+                    Helpers.sleep(500);
+
+                    // mark ship as destroyed in enemy's grid
+                    markShipAsDestroyed(turnCoordonates, enemy.grid, enemy.boardObjects);
+                    
+                    // mark it as destroyed in hitlist
+                    Ship ship = getShipByCoordonates(turnCoordonates, enemy.grid, enemy.boardObjects);
+                    int shipSize = ship.size;
+                    int x = ship.coordonates.x();
+                    int y = ship.coordonates.y();
+
+                    Ship destroyedShip = new Ship(shipSize, new Coordonates(x, y), ship.direction);
+                    destroyedShip.setShipAsDestroyed();
+                    hitList.add(destroyedShip);
                 }
 
-                System.out.println();
-                Helpers.sleep(500);
+                incrementHitCount();
 
-                // mark ship as destroyed in enemy's grid
-                markShipAsDestroyed(turnCoordonates, enemy.grid, enemy.boardObjects);
-                
-                // mark it as destroyed in hitlist
-                Ship ship = getShipByCoordonates(turnCoordonates, enemy.grid, enemy.boardObjects);
-                int shipSize = ship.size;
-                int x = ship.coordonates.x();
-                int y = ship.coordonates.y();
-
-                Ship destroyedShip = new Ship(shipSize, new Coordonates(x, y), ship.direction);
-                destroyedShip.setShipAsDestroyed();
-                hitList.add(destroyedShip);
+                // we do not decrement i if we hit
+                i++;
             }
-
-            incrementHitCount();
-
-            return TurnResult.Hit;
         }
         return TurnResult.PassTurn;
     }
@@ -1721,9 +1900,26 @@ class HumanPlayer extends Player {
         hitCount = 0;
 
         addShips();
+
+        Helpers.slowType("LASTLY, CAPTAIN, HOW SHOULD WE CALL YOU");
+
+        promptPlayerName();
     }
 
+    /**
+     * asks player name and sets it 
+    */
+    private void promptPlayerName() {
+        ScreenManager.askCaptainName();
 
+        String name = InputManager.getNextLine();
+
+        if (name.isEmpty()) {
+            this.playerName = "CAPTAIN";
+        } else {
+            this.playerName = name;
+        }
+    }
 
     /**
      * renders the ship we're trying to add to screen <br>
@@ -2153,10 +2349,36 @@ class HumanPlayer extends Player {
         System.out.println("1");
     }
 
-}
+    /**
+     * sets the player movecount according to gamemode
+     * @param gameMode takes a valid gamemode
+     */
+    public void setPlayerGameMode(GameModes gameMode) {
+        switch (gameMode) {
+            case Vanila:
+                moveCount = 1;
+                break;
+
+            case TwoMoves:
+                moveCount = 2;
+                break;
+
+            case Sniper:
+                moveCount = 1;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private void promptPlayerProceed() {
+        System.out.println("PROCEED?");
+        InputManager.getLetter();
+    }
+} 
 
 class Bot extends Player {
-    protected int moveCount;
     protected int scoreIncrement = 1;
 
     Bot() {
@@ -2348,10 +2570,10 @@ class AlgorithmicBot extends Bot {
 
     // scores
     // some might call these magic numbers which they are
-    double possibleShipPositionBuff = 1.5;
-    double closenessToCenterMultiplier = 0.8; 
-    double cellAroundHitBuff = 10.5;
-    double guaranteedPossibleShipBuff = 15.5;
+    private double possibleShipPositionBuff = 1.5;
+    private double closenessToCenterMultiplier = 0.8;
+    private double cellAroundHitBuff = 10.5;
+    private double guaranteedPossibleShipBuff = 15.5;
 
     private boolean firstMoveThisMatch = true;
 
@@ -2875,7 +3097,7 @@ enum GameType {
     Cancel, RandomBot, LocalPvP
 }
 enum GameModes {
-    BotEasy, BotMedium, BotHard, Sniper, Back
+    BotEasy, BotMedium, BotHard, Sniper, Back, TwoMoves, Vanila
 }
 enum AddShipResult {
     ShipAdded, DeleteLastShip, Cancel, Clear
@@ -3676,10 +3898,7 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         System.out.println(STD_SPACE + "[2] AN ALGORITHIC BOT");
 
         System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[3] AN AI");
-
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[4] LOCAL PVP");
+        System.out.println(STD_SPACE + "[3] LOCAL PVP");
 
         System.out.print(MENU_LINE_START);
         System.out.println(STD_SPACE + "[0] MAIN MENU");
@@ -3788,6 +4007,45 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         System.out.println(STD_LINE);
     }
 
+    public static void choosePvPGameMode() {
+
+        clearConsole();
+        System.out.print(borderTopBegin);
+        System.out.println(STD_LINE);
+
+        System.out.println(borderVerticalLine + STD_SMALL_LINE);
+        
+        System.out.println(MENU_LINE_START + STD_SPACE + "WHAT GAME MODE WE PLAYIN' PLAYERS?");
+        
+        System.out.println(borderVerticalLine + STD_SMALL_LINE);
+        
+        System.out.println(MENU_LINE_START);
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[1] VANILA");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(boring nothing new)");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[2] TWO MOVES");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(each player has 2 moves each)");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[3] SNIPER DUEL");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "(you both have 1 1tiled ship, who hits first wins!)");
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println(STD_SPACE + "[0] BACK");
+        
+        System.out.print(borderBottomBegin);
+        System.out.println(STD_LINE);
+    }
+
     public static void placingShipsMenu() {
         System.out.println(STD_LINE);
         System.out.println(STD_SPACE);
@@ -3883,21 +4141,26 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         System.out.println(borderVerticalLine);
 
 
-        System.out.print(
-            borderVerticalLine + horizontalPadding + 
-            "[ " + player1Name + " ]" + horizontalPadding + 
-            player1ShipCount + horizontalPadding + "SHIPS " + 
-            horizontalPadding + "│" + horizontalPadding +
-            "[ " + player2Name + " ]" + horizontalPadding + 
-            player2ShipCount + horizontalPadding + "SHIPS " +
-            horizontalPadding
-        );
+        if (!mode.equals("o")) {
+            System.out.print(
+                borderVerticalLine + horizontalPadding + 
+                "[ " + player1Name + " ]" + horizontalPadding + 
+                player1ShipCount + horizontalPadding + "SHIPS " + 
+                horizontalPadding + ((player1Score >= 10) ? " " : "") +
+                "│" + horizontalPadding +
+                "[ " + player2Name + " ]" + horizontalPadding + 
+                player2ShipCount + horizontalPadding + "SHIPS " +
+                horizontalPadding + ((player2Score >= 10) ? " " : "")
+            );
 
-        if (borderOdd) {
-            System.out.print(" ");
+            if (borderOdd) {
+                System.out.print(" ");
+            }
+
+            System.out.println(borderVerticalLine);
         }
 
-        System.out.println(borderVerticalLine);
+
 
         System.out.println(borderBottomBegin + borderHorizontalLine.repeat(scoreBoardWidth) + borderBottomEnd);        
     }
@@ -4037,11 +4300,11 @@ class Helpers {
      * @param ms how much time to sleep
      */
     public static void sleep(int ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            System.out.println("[DEBUG] an exception occured: " + e.getLocalizedMessage());
-        }
+        // try {
+        //     Thread.sleep(ms);
+        // } catch (InterruptedException e) {
+        //     System.out.println("[DEBUG] an exception occured: " + e.getLocalizedMessage());
+        // }
     }
 
     /**
