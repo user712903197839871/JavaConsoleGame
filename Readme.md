@@ -1,4 +1,4 @@
-# BETA 0.99.67 VERSION
+# BETA 0.99.99 VERSION
 ```
  _____ _____ _____ _____ _____ _____ __ __    _       _ 
 |     |     | __  |   __|  |  |     |  |  |  | |_ ___|_|
@@ -14,10 +14,9 @@ A console sea battle game, mostly for a grade
 Idk why would you want this, but just get the source file in src/main/java download Main.java, hopefully you have a java compiler, compile it and run it
 
 
-## ABOUT VERSION BETA 0.99.67
-added settings <br>
-rewrote a lot of things <br>
-+like 1000 lines of code, -sleep<br>
+## ABOUT VERSION BETA 0.99.9
+added some options <br>
+did some more cheeky things, needs a little more polish before release (i mean the Readme i cannot be fucked to dive in code)
 
 
 # developer's stuff

@@ -144,15 +144,16 @@ class GameRunner {
 
             // donate?
             case 4:
-                System.out.println("Do stuff with donations");
+                ScreenManager.donateOption();
                 break;
 
             // game modes maybe game rules
             case 5:
-                System.out.println("game modes info");
+                ScreenManager.manPage();
+                HumanPlayer.promptPlayerProceed();
                 break;
 
-            // ... dont press 7!
+            // ... dont press 6!
             case 6:
                 sixSevenMainMenuOption();
                 break;
@@ -440,21 +441,13 @@ class GameRunner {
         Helpers.printMessageAndThreeDotsSlowly("CAPTAIN");
         Helpers.sleep(400);
         Helpers.printMessageAndThreeDotsSlowly("DON'T SAY THAT YOU");
-        Helpers.sleep(800);
-
-        Helpers.printMessageAndThreeDotsSlowly("CAPTAIN, FINISH WHAT MUST BE FINISHED");
-
-        String isDalbaiob = InputManager.getLetter();
-
-        if (isDalbaiob.equals("7")) {
-            Helpers.printMessageAndThreeDotsSlowly("I KNOW WHAT KIND OF A MAN YOU ARE");
-            ScreenManager.print67();
-            Helpers.sleep(670);
-        } else {
-            Helpers.slowType("MEH ");
-            Helpers.sleep(400);
-            Helpers.slowType("WHATEVER");
-        }
+        Helpers.sleep(800); 
+        Helpers.slowType("YOU", 140, false);
+        Helpers.slowType(Colors.RED + ", YOU" + Colors.RESET, 250, false);
+        Helpers.slowType(" FILTHY MAN!", 100);
+        Helpers.printMessageAndThreeDotsSlowly("I KNOW WHAT KIND OF A MAN YOU ARE!");
+        ScreenManager.print67();
+        Helpers.sleep(670);
     }
 
 }
@@ -1999,7 +1992,7 @@ class HumanPlayer extends Player {
 
             System.out.println();
             Helpers.slowType("YOU CAN ALSO: ");
-            System.out.println("\n[G] - give up  |  [Q] - quit game (rage quit, the other guy does not gain points, return to main menu)\n[M] - see my map  |  [S] - see enemies remaining ships");
+            System.out.println("\n[G] - give up  |  [Q] - quit game (rage quit, the other guy does not gain points, return to main menu)\n[M] - see my map  |  [S] - see enemies remaining ships  |  [F] - SCOREBOARD");
             System.out.println("\n");   // 2 smart and efficient newlines
 
 
@@ -2059,7 +2052,16 @@ class HumanPlayer extends Player {
 
                     promptPlayerProceed();
 
-                } 
+                } else if (consoleInput.equalsIgnoreCase("f")) {
+                    Helpers.slowType("SURE, HERE ARE THE SCORES:");
+                    
+                    ScreenManager.printScore(getHitCount(), enemy.getHitCount(), playerName, enemy.playerName, getShipCount(), enemy.getShipCount(), "h");
+
+                    System.out.println();
+                    promptPlayerProceed();
+
+                    ScreenManager.clearConsole();
+                }
                 // invalid option
                 else if (!validTurn(consoleInput, enemy)) {
                     Helpers.printInvalidInputMessage();
@@ -2663,7 +2665,7 @@ class HumanPlayer extends Player {
         }
     }
 
-    private void promptPlayerProceed() {
+    public static void promptPlayerProceed() {
         System.out.println("PROCEED?");
         InputManager.getLetter();
     }
@@ -3568,7 +3570,7 @@ class GameSettings {
      * a pointer that works on allowedGamesSpeeds array
      */
     // i set the speed to super quick, change back to normal in future
-    public static int gameSpeedPointer = 3;
+    public static int gameSpeedPointer = 0;
 
     /**
      * @return current game speed divisor
@@ -4314,9 +4316,6 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
 
     
     public static void askCaptainName() {
-        System.out.println(STD_LINE);
-        System.out.println(STD_SPACE + "CAPTAIN HOW SHOULD WE CALL YOU?");
-        System.out.println(STD_LINE);
         System.out.println("(if nothing types the default CAPTAIN is chosen)");
     }
 
@@ -4347,8 +4346,8 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
             " FIGHT!",
             " SETTINGS",
             " DONATE",
-            " GAME MODES",
-            " RULES/MANPAGE"
+            " GAME MODES/RULES/MANPAGE",
+            " 67"
         };
 
         String bottomText = "[!] CAPTAIN THE SYSTEM IS AWAITING INPUT";
@@ -4570,9 +4569,10 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
 
 
         System.out.print(MENU_LINE_START);
-
-
         System.out.println(bottomText);
+        
+        System.out.print(MENU_LINE_START);
+        System.out.println("[W] MOVE UP | [S] MOVE DOWN | [P] SELECT OPTION");
 
 
         System.out.print(borderBottomBegin);
@@ -4581,27 +4581,6 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         System.out.println();
     }
  
-
-
-    public static void gameStartScreen() {
-        System.out.println(STD_LINE);
-        Helpers.slowType("PLAYERS ARE YOU READY?");
-        System.out.println(STD_LINE);
-
-        Helpers.sleep(600);
-
-        System.out.println(THREE);
-        Helpers.sleep(600);
-
-        System.out.println(TWO);
-        Helpers.sleep(600);
-
-        System.out.println(ONE);
-        Helpers.sleep(300);
-    }
-
-
-
     /**
      * prints the scores of players  <br>
      * @param player1Score 
@@ -4707,6 +4686,68 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         Helpers.sleep(5000);
     }
 
+
+    public static void donateOption() {
+        Helpers.slowType("OKAY, FIRST GIVE ME YOU CARD NUMBER");
+        InputManager.getNextLine();
+        Helpers.slowType("NOW GIMME YOUR CVV");
+        InputManager.getNextLine();
+        Helpers.slowType("LASTLY GIMME CARD DATE");
+        InputManager.getNextLine();
+
+        Helpers.slowType("I CONGRAGULATE YOU!");
+        Helpers.sleep(500);
+        Helpers.slowType("NOW YOU'RE A CLIENT OF ALBATROS COMPANY");
+        Helpers.sleep(2000);
+    }
+
+
+    public static void manPage() {
+        clearConsole();
+
+        Helpers.slowType("=== NAVAL COMMAND CENTER: OPERATIONAL PROTOCOLS ===");
+        System.out.println();
+        Helpers.slowType("COMMANDER, SELECT YOUR THEATER OF OPERATIONS:");
+        System.out.println();
+
+        // Polished Game Modes
+        System.out.println(" [SHIPPER]         - A lethal duel of precision. You command a single 1x1 vessel.");
+        System.out.println("                     The first commander to land a strike reigns supreme.");
+        System.out.println();
+        System.out.println(" [RANDOM BOT]      - An unpredictable, erratic adversary. This unit operates without ");
+        System.out.println("                     strategy, relying solely on the whims of chaotic chance.");
+        System.out.println();
+        System.out.println(" [ALGORITHMIC BOT] - A cold, calculating tactician. Equipped with matrix-based ");
+        System.out.println("                     probability analytics, this unit hunts with lethal efficiency.");
+        System.out.println();
+        System.out.println(" [PVP]             - Test your mettle against a fellow human strategist in head-to-head combat.");
+        System.out.println();
+        System.out.println(" [!] TACTICAL ADVISORY: Superior AI units are authorized for multiple strikes per turn.");
+        
+        System.out.println();
+        System.out.println(STD_SMALL_LINE);
+        System.out.println();
+
+        // The Rules of Engagement
+        System.out.println("=== RULES OF ENGAGEMENT ===");
+        System.out.println("1. THE GRID: All operations are conducted on a 10x10 coordinate plane (could be changed in settings).");
+        System.out.println("2. FLEET DEPLOYMENT: Players must discreetly arrange their fleet across the grid.");
+        System.out.println("   Once hostilities commence, positions are locked and immutable.");
+        System.out.println("3. HOSTILITIES: Commanders alternate turns, firing a single strike at a ");
+        System.out.println("   designated coordinate per salvo.");
+        System.out.println("4. DAMAGE ASSESSMENT: A strike results in either a 'MISS' (into open water) ");
+        System.out.println("   or a 'HIT' (contact with an enemy hull).");
+        System.out.println("5. OBJECTIVE: Victory is achieved only when every vessel in the enemy ");
+        System.out.println("   fleet has been sent to the depths.");
+        System.out.println("6. VICTORY CONDITIONS: The first commander to successfully identify and ");
+        System.out.println("   neutralize all enemy units wins the engagement.");
+        System.out.println();
+        System.out.println();
+        System.out.println("~~~ written by GEMINI ~~~");
+        System.out.println("copyright by ME, DO NOT COPY THIS SLOP PLS");
+        System.out.println();
+        System.out.println();
+    } 
 
     /**
      * prints beautifull stuff before hit
