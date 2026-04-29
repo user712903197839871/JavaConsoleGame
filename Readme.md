@@ -1,4 +1,4 @@
-# BETA 0.99 VERSION
+# BETA 0.99.67 VERSION
 ```
  _____ _____ _____ _____ _____ _____ __ __    _       _ 
 |     |     | __  |   __|  |  |     |  |  |  | |_ ___|_|
@@ -14,10 +14,10 @@ A console sea battle game, mostly for a grade
 Idk why would you want this, but just get the source file in src/main/java download Main.java, hopefully you have a java compiler, compile it and run it
 
 
-## ABOUT VERSION BETA 0.99
-Gave up on ai shit, we have the algorithmic thing so whatever <br>
-Added pvp, though loccaly, could've done something with sockets and remote connection but fuck it <br>
-NOW WE HAVE PVP, thats it not much else
+## ABOUT VERSION BETA 0.99.67
+added settings <br>
+rewrote a lot of things <br>
++like 1000 lines of code, -sleep<br>
 
 
 # developer's stuff
@@ -44,7 +44,7 @@ MatchLoader.playRound maybe make a enum idk
 - [x] make githubby checkboxes work
 - [x] bruh, make checking ship destroyed and shi an actual good algorithm not bruteforce
 - [x] add pvp, that actually works
-- [ ] Settings, yeah so now implement settings
+- [x] Settings, yeah so now implement settings
 - [ ] Do game modes/man page
 - [ ] compile this shit into an actual dowloadable exe
 - [ ] do a normal readme and add licence and shi

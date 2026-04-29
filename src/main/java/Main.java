@@ -2,10 +2,12 @@ import org.jline.terminal.Terminal;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.LineReader;
 
-import java.util.List;
 import java.lang.Thread;
+
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -15,6 +17,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class Main {
     public static void main(String[] args) {
         InputManager.init();
+        MenuTypes.initialize();
 
         GameRunner gameRunner = new GameRunner();
 
@@ -110,10 +113,7 @@ class GameRunner {
         ScreenManager.printLoadingScreen();
 
         while (gameBooted) {
-            ScreenManager.printMainMenu();
-            consoleInput = InputManager.getLetter();
-
-            processMainMenuOptions(consoleInput);
+            mainMenu();
         }
     }
 
@@ -122,43 +122,314 @@ class GameRunner {
      * from here into Battle | Settings | Donate | Game modes
      * @param optionChosenString is the option chosen from main menu
      */
-    private void processMainMenuOptions(String optionChosenString) {
-        switch (optionChosenString) {
+    private void mainMenu() {
+        int optionChosen = runCoolArrowedMenu(ScreenType.MainMenu);
+
+        switch (optionChosen) {
+            // exit
+            case 1:
+                Helpers.slowType("BYE CAPTAIN");
+                gameBooted = false;
+                return;
+
             // battle, choosing game mode
-            case "1":
-                chooseGameType();
+            case 2:
+                chooseGameTypeMenu();
                 break;
 
             // settings
-            case "2":
-                ScreenManager.printSettingsScreen();
+            case 3:
+                settingsMenu();
                 break;
 
             // donate?
-            case "3":
+            case 4:
                 System.out.println("Do stuff with donations");
                 break;
 
             // game modes maybe game rules
-            case "4":
+            case 5:
                 System.out.println("game modes info");
                 break;
 
             // ... dont press 7!
-            case "6":
+            case 6:
                 sixSevenMainMenuOption();
                 break;
 
-            // exit
-            case "0":
-                Helpers.slowType("BYE CAPTAIN");
-                gameBooted = false;
-                break;
         
-            // cant read so pressed something else
+            // user cant read or is dumb so pressed something else
             default:
                 Helpers.printInvalidInputMessage();
                 break;
+        }
+    }
+
+
+    /**
+     * here we choose a game type
+     * either RandomBot | Algorithmic bot | PVP
+     */
+    private void chooseGameTypeMenu() {
+        while (true) {
+            int gameTypeChosen = runCoolArrowedMenu(ScreenType.ChooseGameTypeMenu);
+                
+            switch (gameTypeChosen) {
+                case 1:
+                    return;
+                
+                case 2:
+                    // Random bot
+                    MatchLoader.loadPVEMatch(captain, BotType.RandomBot);
+                    break;
+
+                case 3:
+                    // algorithmic bot
+                    MatchLoader.loadPVEMatch(captain, BotType.AlgorithmicBot);
+                    break;
+
+                case 4:
+                    // pvp stuff
+                    MatchLoader.loadPVPMatch(captain, guest);
+                    break;
+
+            
+                default:
+                    Helpers.printInvalidInputMessage();
+                    break;
+            }
+        }
+    }
+
+    /**
+     * runs the setting menu and processes options
+     */
+    private void settingsMenu() {
+        
+        while (true) {
+            int optionChosen = runCoolArrowedMenu(ScreenType.SettingMenu);
+
+            /* 
+                " EXIT",
+                " CHANGE GRID SIZE",
+                " CHANGE THIS ANNOYING POINTER",
+                " CHANGE POINTER'S COLOR",
+                " CHANGE GAME SPEED", */
+
+
+            // process that option
+            switch (optionChosen) {
+                case 1:
+                    return;
+
+                case 2:
+                    SettingsManager.changeGridSize();
+                    break;
+
+                case 3:
+                    SettingsManager.changePointerGraphic();
+                    break;
+
+                case 4:
+                    SettingsManager.changePointerColor();
+                    break;
+
+                case 5:
+                    SettingsManager.changeGameSpeed();
+                    break;
+            
+                default:
+                    break;
+            }
+        }
+    }
+        /**
+     * chooses random bot's game type, how many moves he has etc 
+     * @return returns a gamemode to workwith in future
+     */
+    public static GameModes chooseRandomBot_Type() {
+        int typeChosen = runCoolArrowedMenu(ScreenType.ChooseRandomBotGameType);
+
+        switch (typeChosen) {
+            case 1:
+                return GameModes.Back;
+
+            case 2:
+                return GameModes.BotEasy;
+
+            case 3:
+                return GameModes.BotMedium;
+
+            case 4:
+                return GameModes.BotHard;
+
+            case 5:
+                return GameModes.Sniper;
+
+        
+            default:
+                Helpers.printInvalidInputMessage();
+                break;
+        }
+        return GameModes.BotEasy;
+    }
+
+    /**
+     * choses a algorithmic's bot valid game type
+     * @return returns a gamemode which sets parameters for bot
+     */
+    public static GameModes chooseAlgorithmicBot_Type() {
+        int typeChosen = runCoolArrowedMenu(ScreenType.ChooseAlgorithmicBotType);
+
+        switch (typeChosen) {
+            case 1:
+                return GameModes.Back;
+                
+            case 2:
+                return GameModes.BotEasy;
+
+            case 3:
+                return GameModes.BotMedium;
+
+            case 4:
+                return GameModes.Sniper;
+
+        
+            default:
+                Helpers.printInvalidInputMessage();
+                break;
+        }
+        return GameModes.BotEasy;
+    }
+
+    /**
+     * prompts player for pvp gamemode
+     * @return a valid GameMode for pvp
+     */
+    public static GameModes choosePvPGameMode() {
+        int gametype = runCoolArrowedMenu(ScreenType.PVPGameType);
+
+        switch (gametype) {
+            case 1:
+                return GameModes.Back;
+
+            case 2:
+                return GameModes.Vanila;
+
+            case 3:
+                return GameModes.TwoMoves;
+
+            case 4:
+                return GameModes.Sniper;
+        
+            default:
+                Helpers.printInvalidInputMessage();
+                break;
+        }
+
+        return GameModes.Vanila;
+    }
+
+    /**
+     * runs a cool menu, where you can navigate vertically
+     * @param screenType is the typa screen we check
+     * @return returns a integer option chosen, could've been a enum, but im in a hurry
+     */
+    public static int runCoolArrowedMenu(ScreenType screenType) {
+        int pointerPosition = 1;
+        String playerInput = "";
+        int maxBoundary = MenuTypes.getNumberOptions(screenType);
+
+        while (true) {
+            switch (screenType) {
+                case MainMenu:
+                    ScreenManager.mainMenuScreen(pointerPosition);
+                    break;
+
+                case SettingMenu:
+                    ScreenManager.printSettingsMenuScreen(pointerPosition);
+                    break;
+
+                case ChooseGameTypeMenu:
+                    ScreenManager.chooseGameMenuScreen(pointerPosition);
+                    break;
+
+                case ChooseRandomBotGameType:
+                    ScreenManager.chooseRandomBot_TypeScreen(pointerPosition);
+                    break;
+
+                case ChooseAlgorithmicBotType:
+                    ScreenManager.chooseAlgorithmicBotTypeScreen(pointerPosition);
+                    break;
+                
+                case PVPGameType:
+                    ScreenManager.choosePvPGameModeScreen(pointerPosition);
+                    break;
+
+                
+                // settings ones
+                case NewGridSize:
+                    ScreenManager.chooseNewGridSize(pointerPosition);
+                    break;
+
+                case NewPointerGraphic:
+                    ScreenManager.chooseNewPointerGraphic(pointerPosition);
+                    break;
+
+                case NewPointerColor:
+                    ScreenManager.chooseNewPointerColor(pointerPosition);
+                    break;
+
+                case NewGameSpeed:
+                    ScreenManager.chooseNewGameSpeed(pointerPosition);
+                    break;
+
+                default:
+                    break;
+            }
+
+            playerInput = InputManager.getLetter();
+
+            // in these switches i use comments to say what each 'magic' option means, maybe i should use a enum?
+            // basically it checks input and does stuff
+            switch (playerInput) {
+                // remember we count from 1 here
+
+                // up
+                case "w":
+                    if (pointerPosition == 1) {
+                        Helpers.printInvalidInputMessage();
+                    } else {
+                        pointerPosition--;
+                    }
+                    break;
+
+                // down
+                case "s":
+                    if (pointerPosition == maxBoundary) {
+                        Helpers.printInvalidInputMessage();
+                    } else {
+                        pointerPosition++;
+                    }
+                    break;
+
+                // option chosen
+                case "p":
+                    // switch pointer position to see which option is chosen
+                    return pointerPosition;
+            
+                default:
+                    Helpers.slowType("OKAY CAPTAIN", false);
+                    Helpers.sleep(500);
+                    Helpers.slowType(", HERE'S HOW IT'S GONNA BE", false);
+                    Helpers.sleep(500);
+                    Helpers.slowType(" YOU CHOOSE A VALID OPTION", false);
+                    Helpers.sleep(500);
+                    Helpers.slowType(", AND I WILL BE KIND TO YOU, ", false);
+                    Helpers.slowType("OKAY?", 200);
+                    Helpers.sleep(1300);
+                    break;
+            }
         }
     }
 
@@ -183,49 +454,6 @@ class GameRunner {
             Helpers.slowType("MEH ");
             Helpers.sleep(400);
             Helpers.slowType("WHATEVER");
-        }
-    }
-
-
-    /**
-     * here we choose a game type
-     * either RandomBot | Algorithmic bot | PVP
-     */
-    private void chooseGameType() {
-        boolean isChoosingGameType = true;
-        String gameType;
-
-        while (isChoosingGameType) {
-            ScreenManager.chooseGameScreen();
-            
-            gameType = InputManager.getLetter();
-
-            switch (gameType.toLowerCase()) {
-                case "1":
-                    // Random bot
-                    MatchLoader.loadPVEMatch(captain, BotType.RandomBot);
-                    break;
-
-                case "2":
-                    // algorithmic bot
-                    MatchLoader.loadPVEMatch(captain, BotType.AlgorithmicBot);
-                    break;
-
-                case "3":
-                    // pvp stuff
-                    MatchLoader.loadPVPMatch(captain, guest);
-                    break;
-
-                case "0":
-                case "e":
-                    isChoosingGameType = false;
-                    break;
-            
-                default:
-                    Helpers.printInvalidInputMessage();
-                    break;
-            }
-
         }
     }
 
@@ -265,11 +493,11 @@ class MatchLoader {
 
             switch (botType) {
                 case RandomBot:
-                    gameMode = chooseRandomBot_Type();
+                    gameMode = GameRunner.chooseRandomBot_Type();
                     break;
 
                 case AlgorithmicBot:
-                    gameMode = chooseAlgorithmicBot_Type();
+                    gameMode = GameRunner.chooseAlgorithmicBot_Type();
                     break;
             
                 default:
@@ -314,7 +542,7 @@ class MatchLoader {
         while (playing) {
             GameModes gameMode = GameModes.Vanila;
 
-            gameMode = choosePvPGameMode();
+            gameMode = GameRunner.choosePvPGameMode();
 
             if (gameMode == GameModes.Back) {
                 return;
@@ -351,9 +579,23 @@ class MatchLoader {
      * @return returns wether the game finished normally, now it's boolean, could be expanded in future
      */
     public static boolean playRound(Player player1, Player player2) {
+        boolean isActuallyPrepared = true;
 
-        player1.prepareForRound();
-        player2.prepareForRound();
+        isActuallyPrepared = player1.prepareForRound();
+
+        if (!isActuallyPrepared) {
+            Helpers.slowType("IDK, PLAYER1 DIDN'T WANT TO PLAY WITH YOU I GUESS");
+            Helpers.sleep(2000);
+            return false;
+        }
+
+        isActuallyPrepared = player2.prepareForRound();
+
+        if (!isActuallyPrepared) {
+            Helpers.slowType("IDK, PLAYER2 DIDN'T WANT TO PLAY WITH YOU I GUESS");
+            Helpers.sleep(2000);
+            return false;
+        }
 
         ScreenManager.clearConsole();
         
@@ -473,108 +715,6 @@ class MatchLoader {
         return playAgain();
     }
 
-    /**
-     * chooses random bot's game type, how many moves he has etc 
-     * @return returns a gamemode to workwith in future
-     */
-    private static GameModes chooseRandomBot_Type() {
-        String consoleInput;
-
-        while (true) {
-            ScreenManager.chooseGameModeScreen();
-            
-            consoleInput = InputManager.getLetter();
-
-            switch (consoleInput.toLowerCase()) {
-                case "1":
-                    return GameModes.BotEasy;
-
-                case "2":
-                    return GameModes.BotMedium;
-
-                case "3":
-                    return GameModes.BotHard;
-
-                case "4":
-                    return GameModes.Sniper;
-
-                case "0":
-                case "e":
-                    return GameModes.Back;
-            
-                default:
-                    Helpers.printInvalidInputMessage();
-                    break;
-            }
-
-        }
-    }
-
-    /**
-     * choses a algorithmic's bot valid game type
-     * @return returns a gamemode which sets parameters for bot
-     */
-    private static GameModes chooseAlgorithmicBot_Type() {
-        String consoleInput;
-
-        while (true) {
-            ScreenManager.chooseGameModeForAlgorithmicBot();
-            
-            consoleInput = InputManager.getLetter();
-
-            switch (consoleInput.toLowerCase()) {
-                case "1":
-                    return GameModes.BotEasy;
-
-                case "2":
-                    return GameModes.BotMedium;
-
-                case "3":
-                    return GameModes.Sniper;
-
-                case "0":
-                case "e":
-                    return GameModes.Back;
-            
-                default:
-                    Helpers.printInvalidInputMessage();
-                    break;
-            }
-        }
-    }
-
-    /**
-     * prompts player for pvp gamemode
-     * @return a valid GameMode for pvp
-     */
-    private static GameModes choosePvPGameMode() {
-        String consoleInput;
-
-        while (true) {
-            ScreenManager.choosePvPGameMode();
-            
-            consoleInput = InputManager.getLetter();
-
-            switch (consoleInput.toLowerCase()) {
-                case "1":
-                    return GameModes.Vanila;
-
-                case "2":
-                    return GameModes.TwoMoves;
-
-                case "3":
-                    return GameModes.Sniper;
-
-                case "0":
-                case "e":
-                    return GameModes.Back;
-            
-                default:
-                    Helpers.printInvalidInputMessage();
-                    break;
-            }
-        }
-    }
 
     /**
      * prints a beautifull screen of data about scores/round end
@@ -631,6 +771,148 @@ class MatchLoader {
 
 
 /**
+ * a class that will manage the settings user decides to change
+ */
+class SettingsManager extends GameRunner {
+
+    /**
+     * sets a new grid size
+     */
+    public static void changeGridSize() {
+        int newGridSize;
+        String inp;
+        while (true) {
+            newGridSize = GameRunner.runCoolArrowedMenu(ScreenType.NewGridSize);
+
+            if (newGridSize == 1) {
+                return;
+            } else {
+                GameSettings.setGridSize(newGridSize-2);
+            }
+            Helpers.slowType("THIS IS HOW OUR GRID WOULD LOOK WITH THE NEW SIZE:");
+            captain.generateShipsPositions();
+            captain.printGrid();
+            captain.clearFields();
+
+            Helpers.slowType("PROCEED WITH NEW SIZE (y/n)?");
+            inp = InputManager.getLetter();
+
+            if (inp.equalsIgnoreCase("y")) {
+                Helpers.slowType("SAVING CHANGES");
+                return;
+            } else if (inp.equalsIgnoreCase("n")) {
+                // we skip, we retry
+            } else {
+                Helpers.printInvalidInputMessage();
+            }
+        }
+    }
+
+    /**
+     * sets a new pointer ascii art
+     */
+    public static void changePointerGraphic() {
+        int newPointerGraphic;
+        String inp;
+        while (true) {
+            newPointerGraphic = GameRunner.runCoolArrowedMenu(ScreenType.NewPointerGraphic);
+
+            if (newPointerGraphic == 1) {
+                return;
+            } else {
+                GameSettings.setNewPointerGraphic(newPointerGraphic-2);
+            }
+
+            Helpers.slowType("THIS' HOW OUR NEW POINTER WILL LOOK");
+            System.out.println(GameSettings.getChooseOptionPointer(true));
+            System.out.println();
+
+            Helpers.slowType("PROCEED WITH NEW POINTER (y/n)?");
+            inp = InputManager.getLetter();
+
+            if (inp.equalsIgnoreCase("y")) {
+                Helpers.slowType("SAVING CHANGES");
+                ScreenManager.updatePointers();
+                return;
+            } else if (inp.equalsIgnoreCase("n")) {
+                // we skip, we retry
+            } else {
+                Helpers.printInvalidInputMessage();
+            }
+        }
+    }
+
+    /**
+     * sets pointer color
+     */
+    public static void changePointerColor() {
+        int newPointerColor;
+        String inp;
+        while (true) {
+            newPointerColor = GameRunner.runCoolArrowedMenu(ScreenType.NewPointerColor);
+
+            if (newPointerColor == 1) {
+                return;
+            } else {
+                GameSettings.setNewPointerColor(newPointerColor-2);
+            }
+
+            Helpers.slowType("THIS' HOW OUR NEW POINTER WILL LOOK, WITH NEW COLOR");
+            System.out.println(GameSettings.getChooseOptionPointer(true));
+            System.out.println();
+
+            Helpers.slowType("PROCEED WITH NEWLY COLORED POINTER (y/n)?");
+            inp = InputManager.getLetter();
+
+            if (inp.equalsIgnoreCase("y")) {
+                Helpers.slowType("SAVING CHANGES");
+                ScreenManager.updatePointers();
+                return;
+            } else if (inp.equalsIgnoreCase("n")) {
+                // we skip, we retry
+            } else {
+                Helpers.printInvalidInputMessage();
+            }
+        }
+    }
+
+    /**
+     * changes game speed
+     */
+    public static void changeGameSpeed() {
+        int newGameSpeed;
+        String inp;
+        while (true) {
+            newGameSpeed = GameRunner.runCoolArrowedMenu(ScreenType.NewGameSpeed);
+
+            if (newGameSpeed == 1) {
+                return;
+            } else {
+                GameSettings.setGameSpeed(newGameSpeed-2);
+            }
+
+            Helpers.slowType("THIS' HOW OUR GAME WILL LOOK WITH THE NEW GAME SPEED:");
+            Helpers.slowType("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean eu porttitor urna. Pellentesque consequat lacinia sagittis.");
+            System.out.println();
+
+            Helpers.slowType("PROCEED WITH NEW SPEED (y/n)?");
+            inp = InputManager.getLetter();
+
+            if (inp.equalsIgnoreCase("y")) {
+                Helpers.slowType("SAVING CHANGES");
+                ScreenManager.updatePointers();
+                return;
+            } else if (inp.equalsIgnoreCase("n")) {
+                // we skip, we retry
+            } else {
+                Helpers.printInvalidInputMessage();
+            }
+        }
+    }
+
+}
+
+/**
  * an abstract class that has shared methods of all players
  */
 abstract class Player {
@@ -652,7 +934,7 @@ abstract class Player {
      */
     List<Pair<Coordonates, Integer>> validShipPositions;
 
-    protected String playerName;
+    protected String playerName = "SEA BATTLE ENJOYER";
 
     protected int score = 0;
 
@@ -701,9 +983,11 @@ abstract class Player {
     /**
      * prepares player's fields for round
      */
-    public void prepareForRound() {
+    public boolean prepareForRound() {
         resetGrid();
         hitCount = 0;
+
+        return true;
     }
     
     /**
@@ -770,9 +1054,9 @@ abstract class Player {
     private List<List<String>> fillEmptyGrid() {
         List<List<String>> grid = new ArrayList<>();
 
-        for (int i = 0; i < GameSettings.gridSize; i++) {
+        for (int i = 0; i < GameSettings.getGridSize(); i++) {
             grid.add(new ArrayList<>());
-            for (int j = 0; j < GameSettings.gridSize; j++) {
+            for (int j = 0; j < GameSettings.getGridSize(); j++) {
                 grid.get(i).add(GameSettings.waterCharacter);
             }
         }
@@ -797,13 +1081,13 @@ abstract class Player {
                 if (object instanceof Ship) {
                     if (object.direction == 1) {
                         int tempSize = object.size;
-                        for (int i = object.coordonates.y(); i < GameSettings.gridSize; i++, tempSize--) {
+                        for (int i = object.coordonates.y(); i < GameSettings.getGridSize(); i++, tempSize--) {
                             if (tempSize == 0) break;
                             grid.get(i).set(object.coordonates.x(), object.graphic);
                         }
                     } else if (object.direction == 2) {
                         int tempSize = object.size;
-                        for (int i = object.coordonates.x(); i < GameSettings.gridSize; i++, tempSize--) {
+                        for (int i = object.coordonates.x(); i < GameSettings.getGridSize(); i++, tempSize--) {
                             if (tempSize == 0) break;
                             grid.get(object.coordonates.y()).set(i, object.graphic);
                         }
@@ -839,7 +1123,7 @@ abstract class Player {
                         }
                         // down
                         if (
-                            y < GameSettings.gridSize-1 &&
+                            y < GameSettings.getGridSize()-1 &&
                             grid.get(y+1).get(x).equals(GameSettings.waterCharacter)
                         ) {
                             grid.get(y+1).set(x, GameSettings.spaceAroundDestroyedShipCharacter);
@@ -853,7 +1137,7 @@ abstract class Player {
                         }
                         // right
                         if (
-                            x < GameSettings.gridSize-1 &&
+                            x < GameSettings.getGridSize()-1 &&
                             grid.get(y).get(x+1).equals(GameSettings.waterCharacter)
                         ) {
                             grid.get(y).set(x+1, GameSettings.spaceAroundDestroyedShipCharacter);
@@ -867,21 +1151,21 @@ abstract class Player {
                         }
                         // diagonals right up
                         if (
-                            x < GameSettings.gridSize-1 && y > 0 &&
+                            x < GameSettings.getGridSize()-1 && y > 0 &&
                             grid.get(y-1).get(x+1).equals(GameSettings.waterCharacter)
                         ) {
                             grid.get(y-1).set(x+1, GameSettings.spaceAroundDestroyedShipCharacter);
                         }
                         // diagonals left down
                         if (
-                            x > 0 && y < GameSettings.gridSize-1 &&
+                            x > 0 && y < GameSettings.getGridSize()-1 &&
                             grid.get(y+1).get(x-1).equals(GameSettings.waterCharacter)
                         ) {
                             grid.get(y+1).set(x-1, GameSettings.spaceAroundDestroyedShipCharacter);
                         }
                         // diagonals right down
                         if (
-                            x < GameSettings.gridSize-1 && y < GameSettings.gridSize-1 &&
+                            x < GameSettings.getGridSize()-1 && y < GameSettings.getGridSize()-1 &&
                             grid.get(y+1).get(x+1).equals(GameSettings.waterCharacter)
                         ) {
                             grid.get(y+1).set(x+1, GameSettings.spaceAroundDestroyedShipCharacter);
@@ -939,9 +1223,9 @@ abstract class Player {
 
         // format the entire horizontal line/border
         String line = stdSpace + stdSpace + borderMidBegin;
-        for (int i = 0; i < GameSettings.gridSize; i++) {
+        for (int i = 0; i < GameSettings.getGridSize(); i++) {
             line = line + gridHorizontalLineBorder;
-            if (i < GameSettings.gridSize-1) {
+            if (i < GameSettings.getGridSize()-1) {
                 line = line + borderMidMid;
             }
         }
@@ -953,7 +1237,7 @@ abstract class Player {
             stdSpace + stdSpace + " "
         );
         for (int key : gridLegendLetters.keySet()) {
-            if (key <= GameSettings.gridSize) {
+            if (key <= GameSettings.getGridSize()) {
                 System.out.print(horizontalPadding + gridLegendLetters.get(key) + horizontalPadding + " ");
             }
         }
@@ -962,7 +1246,7 @@ abstract class Player {
 
         // upper line, border top
         System.out.print(stdSpace + stdSpace + borderTopBegin + gridHorizontalLineBorder);
-        for (int i = 0; i < GameSettings.gridSize-1; i++) {
+        for (int i = 0; i < GameSettings.getGridSize()-1; i++) {
             System.out.print(borderTopMid + gridHorizontalLineBorder);
         }
         System.out.println(borderTopEnd);
@@ -970,14 +1254,14 @@ abstract class Player {
 
         // grid data
         // for each line
-        for (int i = 0; i < GameSettings.gridSize; i++) {
+        for (int i = 0; i < GameSettings.getGridSize(); i++) {
 
             // format each line
 
             // first format padding
             String paddingTopBottom = "";
             paddingTopBottom = paddingTopBottom + stdSpace + stdSpace + gridVerticalLineBorder;
-            for (int j = 0; j < GameSettings.gridSize; j++) {
+            for (int j = 0; j < GameSettings.getGridSize(); j++) {
                 // it's water color this section in water color
                 if (gridToPrint.get(i).get(j).equals(GameSettings.waterCharacter)) {
                     paddingTopBottom = paddingTopBottom + Colors.WATER_BACKGROUND_COLOR + 
@@ -1034,7 +1318,7 @@ abstract class Player {
             System.out.print((i+1) + stdSpace + "\b" + gridVerticalLineBorder);
 
             // format cell&cell data
-            for (int j = 0; j < GameSettings.gridSize; j++) {
+            for (int j = 0; j < GameSettings.getGridSize(); j++) {
                 // water
                 if (gridToPrint.get(i).get(j).equals(GameSettings.waterCharacter)) {
                     System.out.print(
@@ -1111,14 +1395,14 @@ abstract class Player {
             }
 
             // print border if not last row
-            if (i < GameSettings.gridSize-1) {
+            if (i < GameSettings.getGridSize()-1) {
                 System.out.println(line);
             }
         }
 
         // bottom border at the end
         System.out.print(stdSpace + stdSpace + borderBottomBegin + gridHorizontalLineBorder);
-        for (int i = 0; i < GameSettings.gridSize-1; i++) {
+        for (int i = 0; i < GameSettings.getGridSize()-1; i++) {
             System.out.print(borderBottomMid + gridHorizontalLineBorder);
         }
         System.out.println(borderBottomEnd);
@@ -1283,13 +1567,13 @@ abstract class Player {
             return false;
         }
         if (
-            x < GameSettings.gridSize-1 && currentGrid.get(y).get(x+1).equals(GameSettings.shipCharacter) ||
+            x < GameSettings.getGridSize()-1 && currentGrid.get(y).get(x+1).equals(GameSettings.shipCharacter) ||
             currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
         ) {
             return false;
         }
         if (
-            y < GameSettings.gridSize-1 && currentGrid.get(y+1).get(x).equals(GameSettings.shipCharacter) ||
+            y < GameSettings.getGridSize()-1 && currentGrid.get(y+1).get(x).equals(GameSettings.shipCharacter) ||
             currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
         ) {
             return false;
@@ -1309,19 +1593,19 @@ abstract class Player {
             return false;
         }
         if (
-            y > 0 && x < GameSettings.gridSize-1 && currentGrid.get(y-1).get(x+1).equals(GameSettings.shipCharacter) ||
+            y > 0 && x < GameSettings.getGridSize()-1 && currentGrid.get(y-1).get(x+1).equals(GameSettings.shipCharacter) ||
             currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
         ) {
             return false;
         }
         if (
-            y < GameSettings.gridSize-1 && x > 0 && currentGrid.get(y+1).get(x-1).equals(GameSettings.shipCharacter) ||
+            y < GameSettings.getGridSize()-1 && x > 0 && currentGrid.get(y+1).get(x-1).equals(GameSettings.shipCharacter) ||
             currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
         ) {
             return false;
         }
         if (
-            y < GameSettings.gridSize-1 && x < GameSettings.gridSize-1 && currentGrid.get(y+1).get(x+1).equals(GameSettings.shipCharacter) ||
+            y < GameSettings.getGridSize()-1 && x < GameSettings.getGridSize()-1 && currentGrid.get(y+1).get(x+1).equals(GameSettings.shipCharacter) ||
             currentGrid.get(y).get(x).equals(GameSettings.shipCharacterInvalidBoard)
         ) {
             return false;
@@ -1354,7 +1638,7 @@ abstract class Player {
 
                 if (currentGrid.get(y).get(x).equals(GameSettings.waterCharacter)) {
 
-                    if (y + shipSize <= GameSettings.gridSize) {
+                    if (y + shipSize <= GameSettings.getGridSize()) {
                         // check if theres noone on the road and nearby
                         if (spaceFree(x, y, shipSize, 1, currentGrid)) {
                             // add a valid vertical(1) position 
@@ -1362,7 +1646,7 @@ abstract class Player {
                         }
                     }
 
-                    if (x + shipSize <= GameSettings.gridSize) {
+                    if (x + shipSize <= GameSettings.getGridSize()) {
                         if (spaceFree(x, y, shipSize, 2, currentGrid)) {
                             // add valid horizontal(2) position
                             validCoords.add(new Pair(new Coordonates(x, y), 2));
@@ -1523,7 +1807,7 @@ abstract class Player {
 
 
         // right check
-        if (x < GameSettings.gridSize-1 && visited.get(y).get(x+1) == 0) {
+        if (x < GameSettings.getGridSize()-1 && visited.get(y).get(x+1) == 0) {
             if (grid.get(y).get(x+1).equals(GameSettings.hitCharacter)) {
                 if (!shipDestroyed(x+1, y, grid, visited)) return false;
                 
@@ -1534,7 +1818,7 @@ abstract class Player {
 
 
         // bottom check
-        if (y < GameSettings.gridSize-1 && visited.get(y+1).get(x) == 0) {
+        if (y < GameSettings.getGridSize()-1 && visited.get(y+1).get(x) == 0) {
             if (grid.get(y+1).get(x).equals(GameSettings.hitCharacter)) {
                 if (!shipDestroyed(x, y+1, grid, visited)) return false;
 
@@ -1819,7 +2103,7 @@ class HumanPlayer extends Player {
 
 
                 // say whether the ship is destroyed or not
-                List<List<Integer>> visited = Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize);
+                List<List<Integer>> visited = Helpers.createEmptyMatrix(GameSettings.getGridSize(), GameSettings.getGridSize());
                 if (!shipDestroyed(turnCoordonates.x(), turnCoordonates.y(), enemy.grid, visited)) {
                     Helpers.slowType(playerName + " DO NOT RELAX SHIP NOT DESTROYED YET!");
                     Helpers.sleep(500);
@@ -1894,16 +2178,20 @@ class HumanPlayer extends Player {
      * prepares player for round, clears grids and shit,<br>your shit*<br>you're shit* 
      */
     @Override
-    public void prepareForRound() {
+    public boolean prepareForRound() {
         resetGrid();
         resetHitGrid();
         hitCount = 0;
 
-        addShips();
+        boolean addedShips = addShips();
 
-        Helpers.slowType("LASTLY, CAPTAIN, HOW SHOULD WE CALL YOU");
+        if (addedShips) {
+            Helpers.slowType("LASTLY, CAPTAIN, HOW SHOULD WE CALL YOU");
 
-        promptPlayerName();
+            promptPlayerName();
+        }
+
+        return addedShips;
     }
 
     /**
@@ -2063,8 +2351,8 @@ class HumanPlayer extends Player {
 
                 case "d":
                     if (
-                        (shipDir == 1 && shipX + 1 < GameSettings.gridSize) || 
-                        (shipDir == 2 && shipX + size < GameSettings.gridSize)
+                        (shipDir == 1 && shipX + 1 < GameSettings.getGridSize()) || 
+                        (shipDir == 2 && shipX + size < GameSettings.getGridSize())
                     ) {
                         shipX++;
                     } else {
@@ -2082,8 +2370,8 @@ class HumanPlayer extends Player {
 
                 case "s":
                     if (
-                        (shipDir == 1 && shipY + size < GameSettings.gridSize) || 
-                        (shipDir == 2 && shipY + 1 < GameSettings.gridSize)
+                        (shipDir == 1 && shipY + size < GameSettings.getGridSize()) || 
+                        (shipDir == 2 && shipY + 1 < GameSettings.getGridSize())
                     ) {
                         shipY++;
                     } else {
@@ -2093,13 +2381,13 @@ class HumanPlayer extends Player {
                 
                 case "r":
                     if (shipDir == 1) {
-                        if (shipX + size < GameSettings.gridSize+1) {
+                        if (shipX + size < GameSettings.getGridSize()+1) {
                             shipDir = 2;
                         } else {
                             Helpers.printInvalidInputMessage();
                         }
                     } else if (shipDir == 2) {
-                        if (shipY + size < GameSettings.gridSize+1) {
+                        if (shipY + size < GameSettings.getGridSize()+1) {
                             shipDir = 1;
                         } else {
                             Helpers.printInvalidInputMessage();
@@ -2179,8 +2467,9 @@ class HumanPlayer extends Player {
     /**
      * runs the place ships thing<br>
      * the vertical ships, choosing which ship to place and shi
+     * @return returns wether we actually added the ships
      */
-    public void addShips() {
+    public boolean addShips() {
         String consoleInput;
         List<ShipToPlace> shipsToPlace = GameSettings.copyOfShips();
 
@@ -2279,7 +2568,7 @@ class HumanPlayer extends Player {
 
 
                 case "q":
-                    return;
+                    return false;
 
                 case "m":
                     boolean generatingShips = true;
@@ -2295,7 +2584,8 @@ class HumanPlayer extends Player {
                         if (consoleInput.equals("y")) {
                             Helpers.slowType("THAT'S WHAT I THUGHT, I KNEW YOU'D LIKE IT ", false);
                             Helpers.slowType("GOOD LITTLE BOY", 70);
-                            return;
+                            
+                            return true;
                         } else if (consoleInput.equals("n")) {
                             Helpers.slowType("LET THE AI TRY AGAIN?\ny/n", false);
                             consoleInput = InputManager.getLetter();
@@ -2331,6 +2621,7 @@ class HumanPlayer extends Player {
         }
 
         Helpers.slowType("CAPTAIN YOU'RE GOOD TO GO");
+        return true;
     }
 
 
@@ -2454,7 +2745,7 @@ class RandomBot extends Bot {
      * prepares bot for round, clears grids and other stuff
      */
     @Override
-    public void prepareForRound() {
+    public boolean prepareForRound() {
         resetGrid();
 
         Helpers.printMessageAndThreeDotsSlowly("CONFIGURING BOT");
@@ -2470,6 +2761,8 @@ class RandomBot extends Bot {
         hitCount = 0;
 
         Helpers.sleep(400);
+
+        return true;
     }
 
     /**
@@ -2537,7 +2830,7 @@ class RandomBot extends Bot {
                     enemy.registerHit(new Hit(new Coordonates(randomValidMove.x(), randomValidMove.y())));
 
                     // check ship destroyed
-                    if (shipDestroyed(randomValidMove.x(), randomValidMove.y(), enemy.grid, Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize))) {
+                    if (shipDestroyed(randomValidMove.x(), randomValidMove.y(), enemy.grid, Helpers.createEmptyMatrix(GameSettings.getGridSize(), GameSettings.getGridSize()))) {
                         // mark ship as destroyed
                         markShipAsDestroyed(randomValidMove, enemy.grid, enemy.boardObjects);
 
@@ -2600,7 +2893,7 @@ class AlgorithmicBot extends Bot {
      * prepares bot for round, clears grids and other stuff
      */
     @Override
-    public void prepareForRound() {
+    public boolean prepareForRound() {
         resetGrid();
 
         Helpers.printMessageAndThreeDotsSlowly("CONFIGURING BOT");
@@ -2618,6 +2911,8 @@ class AlgorithmicBot extends Bot {
         firstMoveThisMatch = true;
 
         Helpers.sleep(400);
+
+        return true;
     }
 
 
@@ -2706,7 +3001,7 @@ class AlgorithmicBot extends Bot {
                 enemy.computeGrid();
 
                 // check ship destroyed
-                if (shipDestroyed(bestMoveChosen.x(), bestMoveChosen.y(), enemy.grid, Helpers.createEmptyMatrix(GameSettings.gridSize, GameSettings.gridSize))) {
+                if (shipDestroyed(bestMoveChosen.x(), bestMoveChosen.y(), enemy.grid, Helpers.createEmptyMatrix(GameSettings.getGridSize(), GameSettings.getGridSize()))) {
                     // mark ship as destroyed
                     markShipAsDestroyed(bestMoveChosen, enemy.grid, enemy.boardObjects);
 
@@ -2718,7 +3013,7 @@ class AlgorithmicBot extends Bot {
 
 
                 // do not increment i
-                i--;
+                i++;
                 lastTurnResult = TurnResult.Hit;
 
             } else if (enemy.grid.get(bestMoveChosen.y()).get(bestMoveChosen.x()).equals(GameSettings.waterCharacter)) {
@@ -2805,7 +3100,7 @@ class AlgorithmicBot extends Bot {
 
         // check current cell
         if (
-            x < 0 || x > GameSettings.gridSize-1 || y < 0 || y > GameSettings.gridSize-1 ||
+            x < 0 || x > GameSettings.getGridSize()-1 || y < 0 || y > GameSettings.getGridSize()-1 ||
             knownIntegerGrid.get(y).get(x) == -2 || knownIntegerGrid.get(y).get(x) == -1
         ) {
             return false;
@@ -2819,13 +3114,13 @@ class AlgorithmicBot extends Bot {
             return false;
         }
         if (
-            x < GameSettings.gridSize-1 && 
+            x < GameSettings.getGridSize()-1 && 
             knownIntegerGrid.get(y).get(x+1) == -2
         ) {
             return false;
         }
         if (
-            y < GameSettings.gridSize-1 && 
+            y < GameSettings.getGridSize()-1 && 
             knownIntegerGrid.get(y+1).get(x) == -2
         ) {
             return false;
@@ -2845,19 +3140,19 @@ class AlgorithmicBot extends Bot {
             return false;
         }
         if (
-            y > 0 && x < GameSettings.gridSize-1 && 
+            y > 0 && x < GameSettings.getGridSize()-1 && 
             knownIntegerGrid.get(y-1).get(x+1) == -2
         ) {
             return false;
         }
         if (
-            y < GameSettings.gridSize-1 && x > 0 && 
+            y < GameSettings.getGridSize()-1 && x > 0 && 
             knownIntegerGrid.get(y+1).get(x-1) == -2
         ) {
             return false;
         }
         if (
-            y < GameSettings.gridSize-1 && x < GameSettings.gridSize-1 && 
+            y < GameSettings.getGridSize()-1 && x < GameSettings.getGridSize()-1 && 
             knownIntegerGrid.get(y+1).get(x+1) == -2
         ) {
             return false;
@@ -2956,7 +3251,7 @@ class AlgorithmicBot extends Bot {
                             bestMoveMatrix.get(i).set(j-1, bestMoveMatrix.get(i).get(j-1) + cellAroundHitBuff);
                         }
                     }
-                    if (j < GameSettings.gridSize-1) {
+                    if (j < GameSettings.getGridSize()-1) {
                         if (bestMoveMatrix.get(i).get(j+1) >= 0) {
                             bestMoveMatrix.get(i).set(j+1, bestMoveMatrix.get(i).get(j+1) + cellAroundHitBuff);
                         }
@@ -2966,7 +3261,7 @@ class AlgorithmicBot extends Bot {
                             bestMoveMatrix.get(i-1).set(j, bestMoveMatrix.get(i-1).get(j) + cellAroundHitBuff);
                         }
                     }
-                    if (i < GameSettings.gridSize-1) {
+                    if (i < GameSettings.getGridSize()-1) {
                         if (bestMoveMatrix.get(i+1).get(j) >= 0) {
                             bestMoveMatrix.get(i+1).set(j, bestMoveMatrix.get(i+1).get(j) + cellAroundHitBuff);
                         }
@@ -2976,9 +3271,9 @@ class AlgorithmicBot extends Bot {
                 // increment cells around consecutive hits
                 if (bestMoveMatrix.get(i).get(j) == -2) {
                     // if below is a hit
-                    if (i < GameSettings.gridSize-1 && bestMoveMatrix.get(i+1).get(j) == -2) {
+                    if (i < GameSettings.getGridSize()-1 && bestMoveMatrix.get(i+1).get(j) == -2) {
                         // if there is a below below
-                        if (i < GameSettings.gridSize-2 && bestMoveMatrix.get(i+2).get(j) >= 0) {
+                        if (i < GameSettings.getGridSize()-2 && bestMoveMatrix.get(i+2).get(j) >= 0) {
                             bestMoveMatrix.get(i+2).set(j, bestMoveMatrix.get(i+2).get(j) + guaranteedPossibleShipBuff);
                         }
                         // if there is a above
@@ -2993,7 +3288,7 @@ class AlgorithmicBot extends Bot {
                             bestMoveMatrix.get(i-2).set(j, bestMoveMatrix.get(i-2).get(j) + guaranteedPossibleShipBuff);
                         }
                         // if there is a below
-                        if (i < GameSettings.gridSize-1 && bestMoveMatrix.get(i+1).get(j) >= 0) {
+                        if (i < GameSettings.getGridSize()-1 && bestMoveMatrix.get(i+1).get(j) >= 0) {
                             bestMoveMatrix.get(i+1).set(j, bestMoveMatrix.get(i+1).get(j) + guaranteedPossibleShipBuff);
                         }
                     }
@@ -3004,14 +3299,14 @@ class AlgorithmicBot extends Bot {
                             bestMoveMatrix.get(i).set(j-2, bestMoveMatrix.get(i).get(j-2) + guaranteedPossibleShipBuff);
                         }
                         // if there is a right
-                        if (j < GameSettings.gridSize-1 && bestMoveMatrix.get(i).get(j+1) >= 0) {
+                        if (j < GameSettings.getGridSize()-1 && bestMoveMatrix.get(i).get(j+1) >= 0) {
                             bestMoveMatrix.get(i).set(j+1, bestMoveMatrix.get(i).get(j+1) + guaranteedPossibleShipBuff);
                         }
                     }
                     // if right is a hit
-                    if (j < GameSettings.gridSize-1 && bestMoveMatrix.get(i).get(j+1) == -2) {
+                    if (j < GameSettings.getGridSize()-1 && bestMoveMatrix.get(i).get(j+1) == -2) {
                         // if there is a right right
-                        if (j < GameSettings.gridSize-2 && bestMoveMatrix.get(i).get(j+2) >= 0) {
+                        if (j < GameSettings.getGridSize()-2 && bestMoveMatrix.get(i).get(j+2) >= 0) {
                             bestMoveMatrix.get(i).set(j+2, bestMoveMatrix.get(i).get(j+2) + guaranteedPossibleShipBuff);
                         }
                         // if there is a left
@@ -3111,7 +3406,41 @@ enum TurnResult {
 enum BotAction {
     SearchShip, HitShipTop, HitShipBottom, HitShipLeft, HitShipRight
 }
+enum ScreenType {
+    MainMenu, SettingMenu, ChooseGameTypeMenu, ChooseRandomBotGameType, ChooseAlgorithmicBotType, PVPGameType,
+    // settings
+    NewGridSize, NewPointerGraphic, NewPointerColor, NewGameSpeed
+}
 
+class MenuTypes {
+    private static Map<ScreenType, Integer> screenTypes = new EnumMap<>(ScreenType.class);
+
+    /**
+     * mandatory, initializes each screen type number of options
+     */
+    public static void initialize() {
+        screenTypes.put(ScreenType.MainMenu, 6);
+        screenTypes.put(ScreenType.SettingMenu, 5);
+        screenTypes.put(ScreenType.ChooseGameTypeMenu, 4);
+        screenTypes.put(ScreenType.ChooseRandomBotGameType, 5);
+        screenTypes.put(ScreenType.ChooseAlgorithmicBotType, 4);
+        screenTypes.put(ScreenType.PVPGameType, 4);
+        // +1 for back option
+        screenTypes.put(ScreenType.NewGridSize, GameSettings.getAllowedGridSizesSize()+1);
+        screenTypes.put(ScreenType.NewPointerGraphic, GameSettings.getPointerVariationsSize()+1);
+        screenTypes.put(ScreenType.NewPointerColor, GameSettings.getPointerColorsSize()+1);
+        screenTypes.put(ScreenType.NewGameSpeed, GameSettings.getNumberOfSpeeds()+1);
+    }
+
+    /**
+     * returns for screenType the number of options it has
+     * @param screenType the screen type
+     * @return the number of options of screenType
+     */
+    public static int getNumberOptions(ScreenType screenType) {
+        return screenTypes.get(screenType);
+    }
+}
 
 // 67
 /**
@@ -3138,21 +3467,197 @@ class GameSettings {
      */
     public static String chooseShipPointer = "^";
 
+
+
+    // main pointer shit
+
+    /**
+     * variants of the main pointer
+     */
+    private static String[] mainPointerVariations = {
+        "-->", "[==>>", "(o>", "Sss~", "<o>", ">", "::>", "++>", ":-)", "==}"
+    };
+    private static String[] pointerColors = {
+        Colors.BLACK, Colors.BLUE, Colors.CYAN, Colors.GREEN, Colors.MAGENTA, Colors.RED, Colors.YELLOW
+    };
+
+    /**
+     * an index for the pointerColors array, which determines which color does the pointer have
+     */
+    public static int currentPointerColor = 0;
+    /**
+     * an index for the mainPoinjterVariations, which determines pointer's graphic
+     */
+    public static int currentPointerGraphic = 0;
+
+    /**
+     * we use this pointer to see which option we are choosing <br>
+     */
+    public static String getChooseOptionPointer(boolean color) {
+        if (color)
+            return pointerColors[currentPointerColor] + mainPointerVariations[currentPointerGraphic] + Colors.RESET;
+        else 
+            return mainPointerVariations[currentPointerGraphic];
+    }
+    /**
+     * @return main option pointer lenght
+     */
+    public static int getPointerLength() {
+        return mainPointerVariations[currentPointerGraphic].length();
+    }
+    /**
+     * @param newPointerIndex sets new index for pointer graphic
+     */
+    public static void setNewPointerGraphic(int newPointerIndex) {
+        currentPointerGraphic = newPointerIndex;
+    }
+    /**
+     * @param newPointerIndex sets new index for pointer color
+     */
+    public static void setNewPointerColor(int newPointerIndex) {
+        currentPointerColor = newPointerIndex;
+    }
+    /**
+     * @return size of pointer variations
+     */
+    public static int getPointerVariationsSize() {
+        return mainPointerVariations.length;
+    }
+    /**
+     * @return size of pointer colors
+     */
+    public static int getPointerColorsSize() {
+        return pointerColors.length;
+    }
+    /**
+     * @return a copy of variations of pointer graphic
+     */
+    public static String[] getAllPointersGraphics() {
+        String[] copy = new String[getPointerVariationsSize()];
+
+        for (int i = 0; i < mainPointerVariations.length; i++) {
+            copy[i] = mainPointerVariations[i];
+        }
+
+        return copy;
+    }
+    /**
+     * @return a copy of variations of pointer color
+     */
+    public static String[] getAllPointersColors() {
+        String[] copy = new String[getPointerColorsSize()];
+
+        for (int i = 0; i < pointerColors.length; i++) {
+            copy[i] = pointerColors[i];
+        }
+
+        return copy;
+    }
+
+
+    // ishowspeed typeshi
+
+    /**
+     * a list of allowed games speeds <br>
+     * these are divisors, how much to divide sleep timer
+     */
+    private static int[] allowedGamesSpeeds = {
+        1, 2, 3, 100
+    };
+    /**
+     * a pointer that works on allowedGamesSpeeds array
+     */
+    // i set the speed to super quick, change back to normal in future
+    public static int gameSpeedPointer = 3;
+
+    /**
+     * @return current game speed divisor
+     */
+    public static int getGameSpeed() {
+        return allowedGamesSpeeds[gameSpeedPointer];
+    }
+    public static void setGameSpeed(int newGameSpeedIndex) {
+        gameSpeedPointer = newGameSpeedIndex;
+    }
+    /**
+     * @return number of speeds in game
+     */
+    public static int getNumberOfSpeeds() {
+        return allowedGamesSpeeds.length;
+    }
+    /**
+     * Returns spid
+     * @return an array of allowd speeds 
+     */
+    public static int[] getAllSpeeds() {
+        int[] copy = new int[getNumberOfSpeeds()];
+
+        for (int i = 0; i < allowedGamesSpeeds.length; i++) {
+            copy[i] = allowedGamesSpeeds[i];
+        }
+
+        return copy;
+    }
+
+
+    // grid size things
+
+    private static int[] allowedGridSizes = {
+        3, 4, 5, 6, 7, 8, 9, 10
+    };
+
+    /**
+     * points to a valid grid size <br>
+     * the default is 2
+     */
+    private static int gridSizePointer = 2;
+
+    /**
+     * sets the grid size
+     * @param gridSizeIndex new grid size index
+     */
+    public static void setGridSize(int gridSizeIndex) {
+        gridSizePointer = gridSizeIndex;
+    }
+    /**
+     * @return the current grid size we play with
+     */
+    public static int getGridSize() {
+        return allowedGridSizes[gridSizePointer];
+    }
+    /**
+     * @return grid allowed sizes size
+     */
+    public static int getAllowedGridSizesSize() {
+        return allowedGridSizes.length;
+    }
+    /**
+     * @return a copy of valid grid sizes
+     */
+    public static int[] getAllowedGridSizesValues() {
+        int[] copy = new int[getAllowedGridSizesSize()];
+
+        for (int i = 0; i < allowedGridSizes.length; i++) {
+            copy[i] = allowedGridSizes[i];
+        }
+
+        return copy;
+    }
+        
+
+    // other stuff
+
     /**
      * each time when inputing a input, we have this pointer to see that the console is ready to take input
      */
     public static String prompt = "> ";
-
+    
     /**
      * wether we play normal mode or sniper mode<br>
      * we can also change this to a enum in future
      */
     public static boolean sniperMode = false;
 
-    /**
-     * the current grid size we play with
-     */
-    public static int gridSize = 7;
 
     // paddings
     private static int STD_SPACE_COUNT = 4;
@@ -3204,10 +3709,10 @@ class GameSettings {
             return copy;
         }
 
-        //                                7
-        int shipsForGridSize = gridSize > 6 ? defaultShipsList.size() : gridSize - 2;
+        //                                     7
+        int shipsForGridSize = getGridSize() > 6 ? defaultShipsList.size() : getGridSize() - 2;
 
-        int shipQuantityReglator = gridSize > 7 ? 0 : 2;
+        int shipQuantityReglator = getGridSize() > 7 ? 0 : 2;
 
         for (int i = 0; i < shipsForGridSize; i++) {
             int shipQuantity = defaultShipsList.get(i).shipQuantity - shipQuantityReglator;
@@ -3319,7 +3824,7 @@ class Coordonates {
      * @return returns the coordonate between boundaries
      */
     private void validateCoordonates(int x, int y) {
-        if (x > GameSettings.gridSize-1 || y > GameSettings.gridSize-1) {
+        if (x > GameSettings.getGridSize()-1 || y > GameSettings.getGridSize()-1) {
             this.x = -1;
             this.y = -1;
             System.out.println("COORDONATES TOO HIGH");
@@ -3523,6 +4028,18 @@ class ScreenManager {
     private static final String MENU_PADDING = " ".repeat(2);
     private static final String MENU_LINE_START = borderVerticalLine + MENU_PADDING;
 
+    // pointer that we see throught the game
+    private static String pointer = GameSettings.getChooseOptionPointer(true) + " " + Colors.GREEN + "(o)" + Colors.RESET;
+    private static String pointerBuffer = " ".repeat(GameSettings.getPointerLength()) + "  " + Colors.RED + "(o)" + Colors.RESET;
+
+    /**
+     * recalculates pointer/buffer
+     */
+    public static void updatePointers() {
+        pointer = GameSettings.getChooseOptionPointer(true) + " " + Colors.GREEN + "(o)" + Colors.RESET;
+        pointerBuffer = " ".repeat(GameSettings.getPointerLength()) + "  " + Colors.RED + "(o)" + Colors.RESET;
+    }
+
 
     private static final String HIT_MESSAGE = """
                                     (X) ─────────────────────────────────────────────────── (X)\r\n
@@ -3550,6 +4067,62 @@ class ScreenManager {
             ║ | |\\/| | |  | |  _  / \\___ \\|  <| |  | |\\   /      | '_ \\ / _ \\| |
             ║ | |  | | |__| | | \\ \\ ____) | . \\ |__| | | |       | |_) | (_) | |
             ║ |_|  |_|\\____/|_|  \\_\\_____/|_|\\_\\____/  |_|       |_.__/ \\___/|_|
+            """;
+
+    private static final String SETTINGS_MENU_TITLE = """
+            ║\t  ___ ___ _____ _____ ___ _  _  ___ ___ 
+            ║\t / __| __|_   _|_   _|_ _| \\| |/ __/ __|
+            ║\t \\__ \\ _|  | |   | |  | || .` | (_ \\__ \\
+            ║\t |___/___| |_|   |_| |___|_|\\_|\\___|___/
+            """;
+
+    private static final String BATTLE_MENU_TITLE = """
+            ║\t  ___   _ _____ _____ _    ___ 
+            ║\t | _ ) /_\\_   _|_   _| |  | __|
+            ║\t | _ \\/ _ \\| |   | | | |__| _| 
+            ║\t |___/_/ \\_\\_|   |_| |____|___|
+            """;
+
+    private static final String RANDOM_BOT_TYPE_TITLE = """
+            ║\t  ___    _   _  _ ___   ___  __  __    ___  ___ _____ 
+            ║\t | _ \\  /_\\ | \\| |   \\ / _ \\|  \\/  |  | _ )/ _ \\_   _|
+            ║\t |   / / _ \\| .` | |) | (_) | |\\/| |  | _ \\ (_) || |  
+            ║\t |_|_\\/_/ \\_\\_|\\_|___/ \\___/|_|  |_|  |___/\\___/ |_|  
+            """;
+
+    private static final String ALGORITHMIC_BOT_TYPE_TITLE = """
+            ║\t    _   ___ 
+            ║\t   /_\\ |_ _|
+            ║\t  / _ \\ | | 
+            ║\t /_/ \\_\\___|
+            """;
+
+    private static final String PVP_TITLE = """
+            ║\t  ___  __   __  ___ 
+            ║\t | _ \\ \\ \\ / / | _ \\
+            ║\t |  _/  \\ V /  |  _/
+            ║\t |_|     \\_/   |_|  
+            """;
+
+    private static final String CHANGE_GRID_TITLE = """
+            ║\t   _  _ _____      __   ___ ___ ___ ___     _  _ _____      __  __  __   _   _  _ 
+            ║\t | \\| | __\\ \\    / /  / __| _ \\_ _|   \\   | \\| | __\\ \\    / / |  \\/  | /_\\ | \\| |
+            ║\t | .` | _| \\ \\/\\/ /  | (_ |   /| || |) |  | .` | _| \\ \\/\\/ /  | |\\/| |/ _ \\| .` |
+            ║\t |_|\\_|___| \\_/\\_/    \\___|_|_\\___|___( ) |_|\\_|___| \\_/\\_/   |_|  |_/_/ \\_\\_|\\_|
+            """;
+
+    private static final String POINTERS_TITLE = """
+            ║\t  ___  ___ ___ _  _ _____ ___ ___  ___ 
+            ║\t | _ \\/ _ \\_ _| \\| |_   _| __| _ \\/ __|
+            ║\t |  _/ (_) | || .` | | | | _||   /\\__ \\
+            ║\t |_|  \\___/___|_|\\_| |_| |___|_|_\\|___/
+            """;
+
+    private static final String GAME_SPEED_TITLE = """
+            ║\t   ___   _   __  __ ___   ___ ___ ___ ___ ___  
+            ║\t  / __| /_\\ |  \\/  | __| / __| _ \\ __| __|   \\ 
+            ║\t | (_ |/ _ \\| |\\/| | _|  \\__ \\  _/ _|| _|| |) |
+            ║\t  \\___/_/ \\_\\_|  |_|___| |___/_| |___|___|___/ 
             """;
 
     private static final String[] SIX_SEVENS = {
@@ -3739,11 +4312,14 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         System.out.println("\n".repeat(50));
     }
 
-    @Deprecated
-    public static void printScreensBottomPadding(int screenOcupied) {
-/*         int screenSize = 34;
-        System.out.println("\n".repeat(screenSize-screenOcupied)); */
+    
+    public static void askCaptainName() {
+        System.out.println(STD_LINE);
+        System.out.println(STD_SPACE + "CAPTAIN HOW SHOULD WE CALL YOU?");
+        System.out.println(STD_LINE);
+        System.out.println("(if nothing types the default CAPTAIN is chosen)");
     }
+
 
     /**
      * the initial loading screen
@@ -3765,9 +4341,189 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
     /**
      * the main menu
      */
-    public static void printMainMenu() {
+    public static void mainMenuScreen(int pointerPosition) {        
+        String[] mainMenuOptions = {
+            " EXIT",
+            " FIGHT!",
+            " SETTINGS",
+            " DONATE",
+            " GAME MODES",
+            " RULES/MANPAGE"
+        };
+
+        String bottomText = "[!] CAPTAIN THE SYSTEM IS AWAITING INPUT";
+        String[] args = {
+            "[ STATUS ]  " + Colors.GREEN + "SYSTEM READY" + Colors.RESET,
+            "AVALAIBLE COMMANDS:"
+        };
+
+        formatMenuScreen(GAME_LOGO, mainMenuOptions, bottomText, pointerPosition, args);
+    }
+
+    /**
+     * prints the settings menu
+     * @param settingPointerPosition which positionare we currently choosing <br>
+     * <b>settingPointerPosition STARTS COUNTING FROM 1!!!</b>
+     */
+    public static void printSettingsMenuScreen(int settingPointerPosition) {
+        String[] settingsOptions = {
+            " TO MAIN MENU",
+            " CHANGE GRID SIZE",
+            " CHANGE THIS ANNOYING POINTER",
+            " CHANGE POINTER'S COLOR",
+            " CHANGE GAME SPEED",
+        };
+
+        String bottomText = "(*) WHAT DO WE WANT TO CHANGE CAPTAIN?";
+
+        formatMenuScreen(SETTINGS_MENU_TITLE, settingsOptions, bottomText, settingPointerPosition);
+    }
+
+    /**
+     * here we choose pvp | algorithmic | ranodm
+     * @param pointerPosition which option we are at now
+     */
+    public static void chooseGameMenuScreen(int pointerPosition) {
+        String[] gamesOptions = {
+            " MAIN MENU",
+            " RANDOM BOT",
+            " AN ALGORITHIC BOT",
+            " LOCAL PVP"
+        };
+
+        String bottomText = "[!] CAPTAIN THE SYSTEM IS AWAITING INPUT";
+
+        formatMenuScreen(BATTLE_MENU_TITLE, gamesOptions, bottomText, pointerPosition);
+    }
+
+    public static void chooseRandomBot_TypeScreen(int pointerPosition) {
+        String[] randomBotTypes = {
+            " BACK",
+            " BOT EASY\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(bot makes a move per your move)",
+            " BOT MEDIUM\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(bot makes 2 moves per your move)",
+            " BOT HARD\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(bot makes 3 moves per your move)",
+            " SNIPER DUEL\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(you and bot have only 1, 1 tiled ship, the first who hits wins!)",
+        };
+
+        String bottomText = "WHAT GAME MODE WE PLAIN' TODAY?";
+
+
+        formatMenuScreen(RANDOM_BOT_TYPE_TITLE, randomBotTypes, bottomText, pointerPosition);
+    }
+
+    public static void chooseAlgorithmicBotTypeScreen(int pointerPosition) {
+        String[] algorithmicBotTypes = {
+            " BACK",
+            " BOT MEDIUM\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(bot makes a move per your move)",
+            " BOT HARD\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(bot makes 2 moves per your move)",
+            " SNIPER DUEL\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(you and bot have only 1, 1 tiled ship, the first who hits wins!)",
+        };
+
+        String bottomText = "WHAT GAME MODE WE PLAIN' TODAY?";
+
+
+        formatMenuScreen(ALGORITHMIC_BOT_TYPE_TITLE, algorithmicBotTypes, bottomText, pointerPosition);
+    }
+
+    public static void choosePvPGameModeScreen(int pointerPosition) {
+        String[] options = {
+            " BACK",
+            " VANILA\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(boring nothing new)",
+            " TWO MOVES\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(each player has 2 moves each)",
+            " SNIPER DUEL\n" + MENU_LINE_START + STD_SPACE.repeat(3) + "(you both have 1 1tiled ship, who hits first wins!)",
+        };
+
+        String bottomText = "WHAT GAME MODE WE PLAYIN' PLAYERS?";
+
+        formatMenuScreen(PVP_TITLE, options, bottomText, pointerPosition);
+    }
+
+    public static void chooseNewGridSize(int pointerPosition) {
+        String[] options = new String[GameSettings.getAllowedGridSizesSize()+1];
+
+        int[] gridSizes = GameSettings.getAllowedGridSizesValues();
+
+        options[0] = " BACK";
+
+        for (int i = 0; i < gridSizes.length; i++) {
+            options[i+1] = " " + gridSizes[i] + "x" + gridSizes[i];
+        }
+
+        String bottomText = "WHICH SIZE YOU'RE CHOOSING CAPTAIN?";
+
+        formatMenuScreen(CHANGE_GRID_TITLE, options, bottomText, pointerPosition);
+    }
+
+    public static void chooseNewPointerGraphic(int pointerPosition) {
+        String[] pointersGraphics = new String[GameSettings.getPointerVariationsSize()+1];
+
+        // this is the same shit but one thing backwards
+        String[] pointersGraphicsBackwards = GameSettings.getAllPointersGraphics();
+
+        pointersGraphics[0] = " BACK";
+
+        for (int i = 0; i < pointersGraphicsBackwards.length; i++) {
+            pointersGraphics[i+1] = " " + pointersGraphicsBackwards[i];
+        }
+
+        String bottomText = "WHICH NEW POINTER GRAPHIC WE'RE CHOOSING FOR TODAY?";
+
+        formatMenuScreen(POINTERS_TITLE, pointersGraphics, bottomText, pointerPosition);
+    }
+    
+    public static void chooseNewPointerColor(int pointerPosition) {
+        String[] pointersColors = new String[GameSettings.getPointerColorsSize()+1];
+
+        // this is the same shit but one step backwards
+        String[] pointersColorsBackwards = GameSettings.getAllPointersColors();
+
+        pointersColors[0] = " BACK";
+
+        for (int i = 0; i < pointersColorsBackwards.length; i++) {
+            pointersColors[i+1] = " " + pointersColorsBackwards[i] + GameSettings.getChooseOptionPointer(false) + Colors.RESET;
+        }
+
+        String bottomText = "WHICH NEW POINTER COLOR WE'RE CHOOSING FOR TODAY?";
+
+        formatMenuScreen(POINTERS_TITLE, pointersColors, bottomText, pointerPosition);
+    }
+    
+    public static void chooseNewGameSpeed(int pointerPosition) {
+        String[] speedsOptions = {
+            "BACK",
+            "NORMAL",
+            "QUICK",
+            "EXTREAMELY QUICK",
+            "INSTANT"
+        };
+
+        String bottomText = "HOW SPEEDY YOU FEEL TODAY TODAY?";
+
+        formatMenuScreen(GAME_SPEED_TITLE, speedsOptions, bottomText, pointerPosition);
+    }
+
+    /**
+     * this function takes this data and formats it in one place in a efficient way in a menu <br>
+     * interrnaly calls the main function
+     * @param menuTitle the title of the menu (preferrably big block text)
+     * @param options the options of the menu
+     * @param bottomText usually prompt for the player
+     */
+    private static void formatMenuScreen(String menuTitle, String[] options, String bottomText, int pointerPosition) {
+        formatMenuScreen(menuTitle, options, bottomText, pointerPosition, new String[0]);
+    }
+    /**
+     * this function takes this data and formats it in one place in a efficient way in a menu <br>
+     * interrnaly calls the main function
+     * @param menuTitle the title of the menu (preferrably big block text)
+     * @param options the options of the menu
+     * @param bottomText usually prompt for the player
+     * @param args it prints each value of array in the middle
+     */
+    private static void formatMenuScreen(String menuTitle, String[] options, String bottomText, int pointerPosition, String[] args) {
         clearConsole();
 
+        
         System.out.print(borderTopBegin);
         System.out.println(STD_LINE);
         
@@ -3776,7 +4532,7 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         System.out.println();
         
 
-        System.out.print(GAME_LOGO);
+        System.out.print(menuTitle);
         System.out.print(borderVerticalLine);
         System.out.println();
 
@@ -3790,270 +4546,42 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
 
 
         System.out.print(MENU_LINE_START);
-        System.out.println("[ STATUS ]  " + Colors.GREEN + "SYSTEM READY" + Colors.RESET);
-
-
-        System.out.print(MENU_LINE_START);
         System.out.println();
 
+        for (int i = 0; i < args.length; i++) {
+            System.out.print(MENU_LINE_START);
+            System.out.println(args[i]);
 
-        System.out.print(MENU_LINE_START);
-        System.out.println("AVALAIBLE COMMANDS:");
+            System.out.print(MENU_LINE_START);
+            System.out.println();
+        }
 
 
         //options 
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[1] FIGHT!");
 
 
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[2] SETTINGS");
-
-
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[3] DONATE");
-
-
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[4] GAME MODES");
-
-
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[5] RULES/MANPAGE");
-
-
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[0] EXIT");
-
-
-        System.out.print(MENU_LINE_START);
-        System.out.println();
-
-
-        System.out.print(MENU_LINE_START);
-
-        
-        System.out.println("[!] CAPTAIN THE SYSTEM IS AWAITING INPUT");
-
-
-        System.out.print(borderBottomBegin);
-        System.out.println(STD_LINE);
-
-    }
-
-    // ...
-    public static void print67() {
-        int sixSevensToBePrinted = Helpers.generateRandomInt(10, 20);
-        String sixSeven;
-        for (int i = 0; i < sixSevensToBePrinted; i++) {
-            sixSeven = SIX_SEVENS[Helpers.generateRandomInt(0, SIX_SEVENS.length-1)];
-
-            System.out.println(sixSeven);
-            Helpers.sleep(100);
+        for (int i = 1; i <= options.length; i++) {
+            System.out.print(MENU_LINE_START);
+            System.out.println(STD_SPACE + ((pointerPosition == i) ? pointer : pointerBuffer) + options[i-1]);
         }
-        Helpers.slowType("CAPTAIN ", 60, false);
-        Helpers.sleep(800);
-        Helpers.slowType("YOU", 180, false);
-        Helpers.slowType(" MADE ME ", 90, false);
-        Helpers.slowType(Colors.RED + "DO" + Colors.RESET, 180, false);
-        Helpers.slowType(" IT", 90, false);
-        Helpers.slowType("...", 120);
-        Helpers.sleep(5000);
-    }
-
-    public static void printSettingsScreen() {
-        System.out.println(STD_LINE);
-        System.out.println("(*) WHAT DO WE WANT TO CHANGE CAPTAIN?");
-        System.out.println(STD_LINE);
-        System.out.println(STD_SPACE + "(1). CHOOSE SHIP GRAPHICS");
-        System.out.println(STD_SPACE + "(2). CHOOSE WATER GRAPHICS");
-        System.out.println(STD_SPACE + "(3). CHOOSE HIT GRAPHICS");
-        System.out.println(STD_SPACE + "(4). CHOOSE MISS GRAPHICS");
-        System.out.println(STD_SPACE + "(5). CHANGE PLAYERS NAMES");
-        System.out.println(STD_SPACE + "(0). exit");
-    }
-
-    public static void chooseGameScreen() {
-
-        clearConsole();
-        System.out.print(borderTopBegin);
-        System.out.println(STD_LINE);
-
-        System.out.print(borderVerticalLine);
-        System.out.println(STD_SMALL_LINE);
-
-        System.out.print(MENU_LINE_START);
-        System.out.println("WHO WE DESTROY TODAY CAPTAIN?");
-
-        System.out.print(borderVerticalLine);
-        System.out.println(STD_SMALL_LINE);
 
         System.out.print(MENU_LINE_START);
         System.out.println();
 
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[1] A RANDOM BOT");
 
         System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[2] AN ALGORITHIC BOT");
 
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[3] LOCAL PVP");
 
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[0] MAIN MENU");
-        
-        System.out.print(MENU_LINE_START);
+        System.out.println(bottomText);
+
+
+        System.out.print(borderBottomBegin);
+        System.out.println(STD_LINE);
+
         System.out.println();
-
-        System.out.print(MENU_LINE_START);
-        System.out.println("[!] CAPTAIN THE SYSTEM IS AWAITING INPUT");
-
-        System.out.print(borderBottomBegin);
-        System.out.println(STD_LINE);
     }
+ 
 
-
-    public static void askCaptainName() {
-        System.out.println(STD_LINE);
-        System.out.println(STD_SPACE + "CAPTAIN HOW SHOULD WE CALL YOU?");
-        System.out.println(STD_LINE);
-        System.out.println("(if nothing types the default CAPTAIN is chosen)");
-    }
-
-
-
-    public static void chooseGameModeScreen() {
-
-        clearConsole();
-        System.out.print(borderTopBegin);
-        System.out.println(STD_LINE);
-
-        System.out.println(borderVerticalLine + STD_SMALL_LINE);
-        
-        System.out.println(MENU_LINE_START + STD_SPACE + "WHAT GAME MODE WE PLAYIN' CAPTAIN?");
-        
-        System.out.println(borderVerticalLine + STD_SMALL_LINE);
-        
-        System.out.println(MENU_LINE_START);
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[1] BOT EASY");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(bot makes a move per your move)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[2] BOT MEDIUM");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(bot makes 2 moves per your move)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[3] BOT HARD");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(bot makes 3 moves per your move)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[4] SNIPER DUEL");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(you and bot have only 1, 1 tiled ship, the first who hits wins!)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[0] BACK");
-        
-        System.out.print(borderBottomBegin);
-        System.out.println(STD_LINE);
-    }
-
-    public static void chooseGameModeForAlgorithmicBot() {
-
-        clearConsole();
-        System.out.print(borderTopBegin);
-        System.out.println(STD_LINE);
-
-        System.out.println(borderVerticalLine + STD_SMALL_LINE);
-        
-        System.out.println(MENU_LINE_START + STD_SPACE + "WHAT GAME MODE WE PLAYIN' CAPTAIN?");
-        
-        System.out.println(borderVerticalLine + STD_SMALL_LINE);
-        
-        System.out.println(MENU_LINE_START);
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[1] BOT MEDIUM");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(bot makes a move per your move)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[2] BOT HARD");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(bot makes 2 moves per your move)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[3] SNIPER DUEL");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(you and bot have only 1, 1 tiled ship, the first who hits wins!)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[0] BACK");
-        
-        System.out.print(borderBottomBegin);
-        System.out.println(STD_LINE);
-    }
-
-    public static void choosePvPGameMode() {
-
-        clearConsole();
-        System.out.print(borderTopBegin);
-        System.out.println(STD_LINE);
-
-        System.out.println(borderVerticalLine + STD_SMALL_LINE);
-        
-        System.out.println(MENU_LINE_START + STD_SPACE + "WHAT GAME MODE WE PLAYIN' PLAYERS?");
-        
-        System.out.println(borderVerticalLine + STD_SMALL_LINE);
-        
-        System.out.println(MENU_LINE_START);
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[1] VANILA");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(boring nothing new)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[2] TWO MOVES");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(each player has 2 moves each)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[3] SNIPER DUEL");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "(you both have 1 1tiled ship, who hits first wins!)");
-        
-        System.out.print(MENU_LINE_START);
-        System.out.println(STD_SPACE + "[0] BACK");
-        
-        System.out.print(borderBottomBegin);
-        System.out.println(STD_LINE);
-    }
-
-    public static void placingShipsMenu() {
-        System.out.println(STD_LINE);
-        System.out.println(STD_SPACE);
-        Helpers.slowType("Captain,");
-        Helpers.sleep(300);
-        Helpers.slowType("BEFORE THE FIGHT WE NEED TO PLACE OUR SHIPS!");
-        System.out.println(STD_LINE);
-    }
 
     public static void gameStartScreen() {
         System.out.println(STD_LINE);
@@ -4072,13 +4600,7 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         Helpers.sleep(300);
     }
 
-    public static void askPlayerMoveScreen(String playerName) {
-        System.out.println();
-        System.out.println();
-        System.out.println(TRANSITION_LINE);
-        Helpers.slowType(playerName + " WHAT IS YOUR MOVE?");
-        System.out.println();
-    }
+
 
     /**
      * prints the scores of players  <br>
@@ -4164,6 +4686,27 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
 
         System.out.println(borderBottomBegin + borderHorizontalLine.repeat(scoreBoardWidth) + borderBottomEnd);        
     }
+
+        // ...
+    public static void print67() {
+        int sixSevensToBePrinted = Helpers.generateRandomInt(10, 20);
+        String sixSeven;
+        for (int i = 0; i < sixSevensToBePrinted; i++) {
+            sixSeven = SIX_SEVENS[Helpers.generateRandomInt(0, SIX_SEVENS.length-1)];
+
+            System.out.println(sixSeven);
+            Helpers.sleep(100);
+        }
+        Helpers.slowType("CAPTAIN ", 60, false);
+        Helpers.sleep(800);
+        Helpers.slowType("YOU", 180, false);
+        Helpers.slowType(" MADE ME ", 90, false);
+        Helpers.slowType(Colors.RED + "DO" + Colors.RESET, 180, false);
+        Helpers.slowType(" IT", 90, false);
+        Helpers.slowType("...", 120);
+        Helpers.sleep(5000);
+    }
+
 
     /**
      * prints beautifull stuff before hit
@@ -4296,15 +4839,17 @@ class Helpers {
     private static final int SLOW_TYPE_SPEED = 40;
 
     /**
-     * works just like python's sleep function
+     * works just like python's sleep function <br>
+     * here we set game speed
      * @param ms how much time to sleep
      */
     public static void sleep(int ms) {
-        // try {
-        //     Thread.sleep(ms);
-        // } catch (InterruptedException e) {
-        //     System.out.println("[DEBUG] an exception occured: " + e.getLocalizedMessage());
-        // }
+        ms = ms / GameSettings.getGameSpeed();
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            System.out.println("[DEBUG] an exception occured: " + e.getLocalizedMessage());
+        }
     }
 
     /**
@@ -4424,7 +4969,8 @@ class Helpers {
             "DID YOU JUST TRY TO BREAK THE GAME CAPTAIN?, NOT ON MY WATCH! I KNOW THIS IS NOT VALID",
             "DID YOU FALL ASLEEP ON THE KEYBOARD CAPTAIN?, THIS IS NOT A VALID INPUT!",
             "DID YOU FALL FROM THE SHIP CAPTAIN?, THIS IS NOT A VALID COMMAND!",
-            "EVEN A DRUNK MONKEY CHOOSES BETTER OPTIONS THAN YOU CATPAIN! THIS IS INVALID"
+            "EVEN A DRUNK MONKEY CHOOSES BETTER OPTIONS THAN YOU CATPAIN! THIS IS INVALID",
+            "COME ON CAPTAIN, BE MORE SERIOUS ABOUT YOUR LIFE CHOICES",
         };
         slowType(invalidInputMessages[generateRandomInt(0, invalidInputMessages.length - 1)]);
     }
@@ -4437,8 +4983,10 @@ class Helpers {
             "CAPTAIN WE NEED TO HIT 'EM BEFORE THEY HIT US\nWHAT ARE YOUR COORDONATES?",
             "CAPTAIN WHERE DO YOU WANT TO SHOOT?",
             "CAPTAIN THE ENEMY IS STILL OUT THERE, WHAT IS YOUR MOVE?",
+            "CAPTAIN THE ENEMY IS STILL OUT THERE, LET'S PRANK THEM!",
             "CAPTAIN DON'T LET THE ENEMY WAIT, WHAT IS YOUR MOVE?",
             "CAPTAIN THE ENEMY IS MOCKING US, GIVE HIM A LESSON, WHAT ARE YOUR COORDONATES?",
+            "CAPTAIN WE NEED TO STRIKE BACK! JUST GIVE US COORDS!",
         };
 
         slowType(askMoveMessages[generateRandomInt(0, askMoveMessages.length - 1)]);
