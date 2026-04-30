@@ -5,7 +5,7 @@
 |_|_|_|_____|__|__|_____|__|__|_____| |_|    |___|___|_|
 ```
 # ⚓ MORSKOY boi: Console Edition ⚓
-> [!**Version**]
+> [!IMPORTANT]
 > Release 1.0
 
 A high-performance, feature-rich Sea Battle (Battleship) game played entirely in the terminal. Built from scratch, featuring real-time input, advanced probability-based AI, and multiple game modes.
