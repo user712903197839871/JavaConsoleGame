@@ -11,9 +11,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
-
-// change the language as well
-
 public class Main {
     public static void main(String[] args) {
         InputManager.init();
@@ -56,10 +53,16 @@ class InputManager {
      */
     public static String getLetter() {
         try {
+            while (terminal.reader().available() > 0) { 
+                terminal.reader().read(); 
+            }
+
             System.out.print(prompt);
             int input = terminal.reader().read();
+
             System.out.print(String.valueOf((char) input).toLowerCase());
             System.out.println();
+
             return String.valueOf((char) input).toLowerCase();
         } catch (Exception e) {
             System.err.println("Error reading input: " + e.getMessage());
@@ -72,6 +75,16 @@ class InputManager {
      * @return returns a line of user's input
      */
     public static String getNextLine() {
+
+        try {
+            while (terminal.reader().available() > 0) { 
+                terminal.reader().read(); 
+            }
+        } catch (Exception e) {
+            System.err.println("Error reading input: " + e.getMessage());
+            return " "; 
+        }
+        
         return reader.readLine(prompt);
     }
 
@@ -577,7 +590,7 @@ class MatchLoader {
         isActuallyPrepared = player1.prepareForRound();
 
         if (!isActuallyPrepared) {
-            Helpers.slowType("IDK, PLAYER1 DIDN'T WANT TO PLAY WITH YOU I GUESS");
+            Helpers.slowType("IDK, PLAYER1 DIDN'T WANT TO PLAY I GUESS");
             Helpers.sleep(2000);
             return false;
         }
@@ -585,7 +598,7 @@ class MatchLoader {
         isActuallyPrepared = player2.prepareForRound();
 
         if (!isActuallyPrepared) {
-            Helpers.slowType("IDK, PLAYER2 DIDN'T WANT TO PLAY WITH YOU I GUESS");
+            Helpers.slowType("IDK, PLAYER2 DIDN'T WANT TO PLAY I GUESS");
             Helpers.sleep(2000);
             return false;
         }
@@ -621,12 +634,11 @@ class MatchLoader {
                         // begin a new round
                         // add points to other guy
                         player2.incrementScore();
+                        printRoundEnd(player1, player2);
                         return true;
 
                     case RageQuited:
                         // go to main menu
-                        // say last guy to move is a looser
-                        Helpers.slowType(player1.playerName + " is a looser");
                         Helpers.sleep(500);
                         return false;
 
@@ -656,12 +668,11 @@ class MatchLoader {
                         // begin a new round
                         // add points to last guy to move
                         player1.incrementScore();
+                        printRoundEnd(player1, player2);
                         return true;
 
                     case RageQuited:
                         // go to main menu
-                        // say last guy to move is a looser
-                        Helpers.slowType(player2.playerName + " is a looser");
                         Helpers.sleep(500);
                         return false;
 
@@ -968,9 +979,7 @@ abstract class Player {
      * @param enemy the enemy object
      * @return the turn result, won, pass turn, gave up || quitted 
      */
-    public TurnResult makeTurn(Player enemy) {
-        return TurnResult.PassTurn;
-    }
+    abstract public TurnResult makeTurn(Player enemy);
 
 
     /**
@@ -1455,7 +1464,9 @@ abstract class Player {
      * @return returns true if turn valid false if not
      */
     public boolean validTurn(String turn, Player enemy) {
-        if (turn.length() != 2) {
+        if (turn.length() < 2) {
+            return false;
+        } else if (turn.length() > 3) {
             return false;
         }
         Coordonates validCoordonates = new Coordonates(turn);
@@ -1990,23 +2001,25 @@ class HumanPlayer extends Player {
 
             promptPlayerProceed();
 
-            System.out.println();
-            Helpers.slowType("YOU CAN ALSO: ");
-            System.out.println("\n[G] - give up  |  [Q] - quit game (rage quit, the other guy does not gain points, return to main menu)\n[M] - see my map  |  [S] - see enemies remaining ships  |  [F] - SCOREBOARD");
-            System.out.println("\n");   // 2 smart and efficient newlines
-
 
             boolean askingMove = true;
             String consoleInput = "";
 
             // get player move first
-            while (askingMove) {
+            while (askingMove) {            
+                System.out.println();
+                Helpers.slowType("YOU CAN ALSO: ");
+                System.out.println("\n[G] - give up  |  [Q] - quit game (rage quit, the other guy does not gain points, return to main menu)\n[M] - see my map  |  [S] - see enemies remaining ships  |  [F] - SCOREBOARD");
+                System.out.println("\n");   // 2 smart and efficient newlines
+
+
                 Helpers.slowType(playerName);
                 Helpers.sleep(800);
                 Helpers.slowType("THIS IS WHAT WE KNOW ABOUT ENEMY'S GRID:");
                 printHitList();
 
 
+                Helpers.slowType("WE ACCEPT ONLY LETTER THEN NUMBER ex A1 B6");
                 Helpers.printRandomAskMove();
 
                 consoleInput = InputManager.getNextLine();
@@ -2015,18 +2028,14 @@ class HumanPlayer extends Player {
                 if (consoleInput.equalsIgnoreCase("g")) {
                     Helpers.slowType(playerName + " GAVE UP", 80);
                     Helpers.sleep(1000);
-                    MatchLoader.printRoundEnd(enemy, this);
                     return TurnResult.GaveUp;
 
                 } 
                 // quit option
                 else if (consoleInput.equalsIgnoreCase("q")) {
                     Helpers.sleep(1000);
-
-                    Helpers.slowType(playerName + " AS A REMAINDER YOU LOST TO: " + enemy.playerName);
-                    Helpers.sleep(500);
-
-                    Helpers.slowType("LOOSER :))", 200);
+                    Helpers.slowType(playerName + " RAGE QUITTED", 80);
+                    
                     Helpers.sleep(2000);
                     return TurnResult.RageQuited;
 
@@ -2643,7 +2652,7 @@ class HumanPlayer extends Player {
     }
 
     /**
-     * sets the player movecount according to gamemode
+     * sets the player movecount according to gamemode 
      * @param gameMode takes a valid gamemode
      */
     public void setPlayerGameMode(GameModes gameMode) {
@@ -2666,12 +2675,12 @@ class HumanPlayer extends Player {
     }
 
     public static void promptPlayerProceed() {
-        System.out.println("PROCEED?");
+        System.out.print("PROCEED (press any button)");
         InputManager.getLetter();
     }
 } 
 
-class Bot extends Player {
+abstract class Bot extends Player {
     protected int scoreIncrement = 1;
 
     Bot() {
@@ -3477,7 +3486,7 @@ class GameSettings {
      * variants of the main pointer
      */
     private static String[] mainPointerVariations = {
-        "-->", "[==>>", "(o>", "Sss~", "<o>", ">", "::>", "++>", ":-)", "==}"
+        "-->", "==>>", "(o>", "Sss~", "<o>", ">", "::>", "++>", ":-)", "==}"
     };
     private static String[] pointerColors = {
         Colors.BLACK, Colors.BLUE, Colors.CYAN, Colors.GREEN, Colors.MAGENTA, Colors.RED, Colors.YELLOW
@@ -3486,11 +3495,11 @@ class GameSettings {
     /**
      * an index for the pointerColors array, which determines which color does the pointer have
      */
-    public static int currentPointerColor = 0;
+    private static int currentPointerColor = 0;
     /**
      * an index for the mainPoinjterVariations, which determines pointer's graphic
      */
-    public static int currentPointerGraphic = 0;
+    private static int currentPointerGraphic = 0;
 
     /**
      * we use this pointer to see which option we are choosing <br>
@@ -3570,7 +3579,7 @@ class GameSettings {
      * a pointer that works on allowedGamesSpeeds array
      */
     // i set the speed to super quick, change back to normal in future
-    public static int gameSpeedPointer = 0;
+    private static int gameSpeedPointer = 0;
 
     /**
      * @return current game speed divisor
@@ -3679,6 +3688,8 @@ class GameSettings {
         "Sir Mohamed Allah Abdul",
         "Timmy tough knuckles",
         "Jhonnatan the dihpressed",
+        "Jorj Vanshingtong",
+        "COMA",
     };
 
     // first is ship size, second is quantity of that ship
@@ -3691,13 +3702,13 @@ class GameSettings {
     );
 
     /**
-     * @return a default name ex Bartholomew
+     * @return a random default name ex Bartholomew
      */
     public static String getRandomDefaultName() {
         return DEFAULT_NAMES[Helpers.generateRandomInt(0, DEFAULT_NAMES.length-1)];
     }
 
-    /**
+    /** 
      * @return we return a valid copy of the default ships list, so we can modify it without worrying about the original one<br>
      * and also we return only the ships that are valid for the current grid size, so we do not have to worry about that later<br>
      * autocomplete is cool<br>
@@ -3785,7 +3796,8 @@ class Colors {
 }
 
 /**
- * a coordonates wrapper that stores xy coordonates in one convenient container
+ * a coordonates wrapper that stores xy coordonates in one convenient container <br>
+ * though sometimes it is better to work with 2 variables
  */
 class Coordonates {
     // aka j
@@ -3798,8 +3810,18 @@ class Coordonates {
      * @param input player input
      */
     Coordonates(String input) {
+        if (input.length() < 2) {
+            this.x = -1;
+            this.y = -1;
+            return;
+        }
         int x = Helpers.translateLetterToNumber(input.charAt(0)) - 1;
-        int y = input.charAt(1) - '0' - 1;
+        int y = input.charAt(1) - '0';
+        if (input.length() > 2) {
+            y = y * 10 + (input.charAt(2) - '0');
+        }
+
+        y -= 1;
 
         this.x = x;
         this.y = y;
@@ -3822,7 +3844,7 @@ class Coordonates {
     /**
      * validates a coordonate <br>
      * checks if it's out of boundaries
-     * @param coordonate the coordonate x|y
+     * @param coordonate the coordonate x&y
      * @return returns the coordonate between boundaries
      */
     private void validateCoordonates(int x, int y) {
@@ -4012,7 +4034,6 @@ class ScreenManager {
     // different graphics/embelishments
 
     // NOTE these embelishments do not print a endline at the end
-    private static final String TRANSITION_LINE = "<~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~><~>";
     private static final String STD_LINE = "════════════════════════════════════════════════════════════════════════════════════════════════════════════";
     private static final String STD_SMALL_LINE = "────────────────────────────────────────────────────────────────────────────────────────────────────────────";
     // graphics
@@ -4126,157 +4147,6 @@ class ScreenManager {
             ║\t | (_ |/ _ \\| |\\/| | _|  \\__ \\  _/ _|| _|| |) |
             ║\t  \\___/_/ \\_\\_|  |_|___| |___/_| |___|___|___/ 
             """;
-
-    private static final String[] SIX_SEVENS = {
-                                """
-                                        +--------------------+     +-------------------------/
-                                        |                    |     |                        /
-                                        |                    |     |                       /
-                                        |        +-----------+     +-------------+        /
-                                        |        |                              /        /
-                                        |        +----------+                  /        /
-                                        |                   |                 /        /
-                                        |        __         |                /        /
-                                        |       {  }        |               /        /
-                                        |        \\/         |              /        /
-                                        |                   |             /        /
-                                        +-------------------+            /--------/
-                                """,
-                                """
- $$$$$$\\  $$$$$$$$\\ 
-$$  __$$\\ \\____$$  |
-$$ /  \\__|    $$  / 
-$$$$$$$\\     $$  /  
-$$  __$$\\   $$  /   
-$$ /  $$ | $$  /    
- $$$$$$  |$$  /     
- \\______/ \\__/           
-                                """,
-                                """
-                                         _____ _______   __   _____ ________      ________ _   _ 
-                                        / ____|_   _\\ \\ / /  / ____|  ____\\ \\    / /  ____| \\ | |
-                                        | (___   | |  \\ V /  | (___ | |__   \\ \\  / /| |__  |  \\| |
-                                        \\___ \\  | |   > <    \\___ \\|  __|   \\ \\/ / |  __| | . ` |
-                                        ____) |_| |_ / . \\   ____) | |____   \\  /  | |____| |\\  |
-                                        |_____/|_____/_/ \\_\\ |_____/|______|   \\/   |______|_| \\_|  
-                                """,
-                                """
- $$$$$$\\  $$$$$$\\ $$\\   $$\\        $$$$$$\\  $$$$$$$$\\ $$\\    $$\\ $$$$$$$$\\ $$\\   $$\\ 
-$$  __$$\\ \\_$$  _|$$ |  $$ |      $$  __$$\\ $$  _____|$$ |   $$ |$$  _____|$$$\\  $$ |
-$$ /  \\__|  $$ |  \\$$\\ $$  |      $$ /  \\__|$$ |      $$ |   $$ |$$ |      $$$$\\ $$ |
-\\$$$$$$\\    $$ |   \\$$$$  /       \\$$$$$$\\  $$$$$\\    \\$$\\  $$  |$$$$$\\    $$ $$\\$$ |
- \\____$$\\   $$ |   $$  $$<         \\____$$\\ $$  __|    \\$$\\$$  / $$  __|   $$ \\$$$$ |
-$$\\   $$ |  $$ |  $$  /\\$$\\       $$\\   $$ |$$ |        \\$$$  /  $$ |      $$ |\\$$$ |
-\\$$$$$$  |$$$$$$\\ $$ /  $$ |      \\$$$$$$  |$$$$$$$$\\    \\$  /   $$$$$$$$\\ $$ | \\$$ |
- \\______/ \\______|\\__|  \\__|       \\______/ \\________|    \\_/    \\________|\\__|  \\__|
-                                """, 
-                                """
-        6666666677777777777777777777
-       6::::::6 7::::::::::::::::::7
-      6::::::6  7::::::::::::::::::7
-     6::::::6   777777777777:::::::7
-    6::::::6               7::::::7 
-   6::::::6               7::::::7  
-  6::::::6               7::::::7   
- 6::::::::66666         7::::::7    
-6::::::::::::::66      7::::::7     
-6::::::66666:::::6    7::::::7      
-6:::::6     6:::::6  7::::::7       
-6:::::6     6:::::6 7::::::7        
-6::::::66666::::::67::::::7         
- 66:::::::::::::667::::::7          
-   66:::::::::66 7::::::7           
-     666666666  77777777
-                                """,
-                                """
-                _________  
-               /         | 
-              '-----.   .' 
-     .-''''-.     .'  .'   
-    /  .--.  \\  .'  .'     
-   /  /    '-'.'  .'       
-  /  /.--.   '---'         
- /  ' _   \\                
-/   .' )   |               
-|   (_.'   /               
- \\       '                 
-   `----'                       
-                                """,
-                                """
-   __      _____  
-U /"/_ u  |___ "| 
-\\| '_ \\/     / /  
- | (_) |  u// /\\  
-  \\___/    /_/ U  
- _// \\\\_  <<>>_   
-(__) (__)(__)__)     
-                                """,
-                                """
-             
- (        )  
- )\\ )  ( /(  
-(()/(  )\\()) 
- /(_))((_)\\  
-(_) /|__  /  
- / _ \\ / /   
- \\___//_/      
-                                """,
-                                """
-   oo_   wW  Ww wW    Ww       oo_         wWw    wWw     \\\\\\  /// 
-  /  _)-<(O)(O)(O)\\  /(O)     /  _)-<  wWw (O)    (O) wWw ((O)(O)) 
-  \\__ `.  (..)  `. \\/ .'      \\__ `.   (O)_( \\    / ) (O)_ | \\ ||  
-     `. |  ||     \\  /           `. | .' __)\\ \\  / / .' __)||\\\\||  
-     _| | _||_    /  \\           _| |(  _)  /  \\/  \\(  _)  || \\ |  
-  ,-'   |(_/\\_) .' /\\ `.      ,-'   | `.__) \\ `--' / `.__) ||  ||  
- (_..--'       (_.'  `._)    (_..--'         `-..-'       (_/  \\_) 
-                                """,
-                                """
-  .-')           ) (`-.             .-')      ('-.        (`-.      ('-.       .-') _  
- ( OO ).          ( OO ).          ( OO ).  _(  OO)     _(OO  )_  _(  OO)     ( OO ) ) 
-(_)---\\_)  ,-.-')(_/.  \\_)-.      (_)---\\_)(,------.,--(_/   ,. \\(,------.,--./ ,--,'  
-/    _ |   |  |OO)\\  `.'  /       /    _ |  |  .---'\\   \\   /(__/ |  .---'|   \\ |  |\\  
-\\  :` `.   |  |  \\ \\     /\\       \\  :` `.  |  |     \\   \\ /   /  |  |    |    \\|  | ) 
- '..`''.)  |  |(_/  \\   \\ |        '..`''.)(|  '--.   \\   '   /, (|  '--. |  .     |/  
-.-._)   \\ ,|  |_.' .'    \\_)      .-._)   \\ |  .--'    \\     /__) |  .--' |  |\\    |   
-\\       /(_|  |   /  .'.  \\       \\       / |  `---.    \\   /     |  `---.|  | \\   |   
- `-----'   `--'  '--'   '--'       `-----'  `------'     `-'      `------'`--'  `--' 
-                                """,
-                                """
-            _____    ____________ _____       _____                   _____     _____\\    \\ _______    ______   _____\\    \\  _____    _____     
-       _____\\    \\  /            \\\\    \\     /    /              _____\\    \\   /    / |    |\\      |  |      | /    / |    ||\\    \\   \\    \\    
-      /    / \\    ||\\___/\\  \\\\___/|\\    |   |    /              /    / \\    | /    /  /___/| |     /  /     /|/    /  /___/| \\\\    \\   |    |   
-     |    |  /___/| \\|____\\  \\___|/ \\    \\ /    /              |    |  /___/||    |__ |___|/ |\\    \\  \\    |/|    |__ |___|/  \\\\    \\  |    |   
-  ____\\    \\ |   ||       |  |       \\    |    /            ____\\    \\ |   |||       \\       \\ \\    \\ |    | |       \\         \\|    \\ |    |   
- /    /\\    \\|___|/  __  /   / __    /    |    \\           /    /\\    \\|___|/|     __/ __     \\|     \\|    | |     __/ __       |     \\|    |   
-|    |/ \\    \\      /  \\/   /_/  |  /    /|\\    \\         |    |/ \\    \\     |\\    \\  /  \\     |\\         /| |\\    \\  /  \\     /     /\\      \\  
-|\\____\\ /____/|    |____________/| |____|/ \\|____|        |\\____\\ /____/|    | \\____\\/    |    | \\_______/ | | \\____\\/    |   /_____/ /______/| 
-| |   ||    | |    |           | / |    |   |    |        | |   ||    | |    | |    |____/|     \\ |     | /  | |    |____/|  |      | |     | | 
- \\|___||____|/     |___________|/  |____|   |____|         \\|___||____|/      \\|____|   | |      \\|_____|/    \\|____|   | |  |______|/|_____|/  
-                                                                                    |___|/                          |___|/                     
-                                """,
-                                """
-░░      ░░░        ░░  ░░░░  ░░░░░░░░░      ░░░        ░░  ░░░░  ░░        ░░   ░░░  ░
-▒  ▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒    ▒▒  ▒
-▓▓      ▓▓▓▓▓▓  ▓▓▓▓▓▓▓    ▓▓▓▓▓▓▓▓▓▓▓      ▓▓▓      ▓▓▓▓▓  ▓▓  ▓▓▓      ▓▓▓▓  ▓  ▓  ▓
-███████  █████  ██████  ██  ███████████████  ██  ██████████    ████  ████████  ██    █
-██      ███        ██  ████  █████████      ███        █████  █████        ██  ███   █
-                                """,
-                                """
-   ___     (_)    __ __     o O O   ___     ___    __ __    ___    _ _    
-  (_-<     | |    \\ \\ /    o       (_-<    / -_)   \\ V /   / -_)  | ' \\   
-  /__/_   _|_|_   /_\\_\\   TS__[O]  /__/_   \\___|   _\\_/_   \\___|  |_||_|  
-_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| {======|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| 
-"`-0-0-'"`-0-0-'"`-0-0-'./o--000'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
-                                """,
-                                """
-    __     ____                                                           
-   / /    |__  |                                                          
-  / _ \\     / /                                                           
-  \\___/   _/_/_                                                           
-_|\"\"\"\"\"|_|\"\"\"\"\"|                                                          
-"`-0-0-'"`-0=0-'
-                                """
-                            };
 
     private static final String ONE = """
              __
@@ -4612,12 +4482,19 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
             scoreBoardWidth++;
         }
 
+        if (player1ShipCount >= 10) {
+            scoreBoardWidth++;
+        }
+        if (player2ShipCount >= 10) {
+            scoreBoardWidth++;
+        }
+
         System.out.println(borderTopBegin + borderHorizontalLine.repeat(scoreBoardWidth) + borderTopEnd);
 
 
         System.out.println(
             borderVerticalLine + 
-            " ".repeat((scoreBoardWidth-centeredText.length())/ 2) +
+            " ".repeat((scoreBoardWidth-centeredText.length())/ 2 - (player1ShipCount >= 10 ^ player2ShipCount >= 10 ? 1 : 0)) +
             centeredText +
             " ".repeat((scoreBoardWidth-centeredText.length())/ 2) +
             " " + borderVerticalLine
@@ -4629,10 +4506,10 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
             borderVerticalLine + horizontalPadding + 
             "[ " + player1Name + " ]" + horizontalPadding + 
             player1Score + horizontalPadding + scoreDescription + 
-            horizontalPadding + "│" + horizontalPadding +
+            horizontalPadding + (player1ShipCount >= 10 ? " " : "") + "│" + horizontalPadding +
             "[ " + player2Name + " ]" + horizontalPadding + 
             player2Score + horizontalPadding + scoreDescription +
-            horizontalPadding
+            horizontalPadding + (player2ShipCount >= 10 ? " " : "")
         );
 
         if (borderOdd) {
@@ -4868,6 +4745,161 @@ _|\"\"\"\"\"|_|\"\"\"\"\"|
         Helpers.slowType(botMissMessages[Helpers.generateRandomInt(0, botMissMessages.length-1)]);
         Helpers.sleep(3000);
     }
+
+
+
+
+    private static final String[] SIX_SEVENS = {
+                                """
+                                        +--------------------+     +-------------------------/
+                                        |                    |     |                        /
+                                        |                    |     |                       /
+                                        |        +-----------+     +-------------+        /
+                                        |        |                              /        /
+                                        |        +----------+                  /        /
+                                        |                   |                 /        /
+                                        |        __         |                /        /
+                                        |       {  }        |               /        /
+                                        |        \\/         |              /        /
+                                        |                   |             /        /
+                                        +-------------------+            /--------/
+                                """,
+                                """
+ $$$$$$\\  $$$$$$$$\\ 
+$$  __$$\\ \\____$$  |
+$$ /  \\__|    $$  / 
+$$$$$$$\\     $$  /  
+$$  __$$\\   $$  /   
+$$ /  $$ | $$  /    
+ $$$$$$  |$$  /     
+ \\______/ \\__/           
+                                """,
+                                """
+                                         _____ _______   __   _____ ________      ________ _   _ 
+                                        / ____|_   _\\ \\ / /  / ____|  ____\\ \\    / /  ____| \\ | |
+                                        | (___   | |  \\ V /  | (___ | |__   \\ \\  / /| |__  |  \\| |
+                                        \\___ \\  | |   > <    \\___ \\|  __|   \\ \\/ / |  __| | . ` |
+                                        ____) |_| |_ / . \\   ____) | |____   \\  /  | |____| |\\  |
+                                        |_____/|_____/_/ \\_\\ |_____/|______|   \\/   |______|_| \\_|  
+                                """,
+                                """
+ $$$$$$\\  $$$$$$\\ $$\\   $$\\        $$$$$$\\  $$$$$$$$\\ $$\\    $$\\ $$$$$$$$\\ $$\\   $$\\ 
+$$  __$$\\ \\_$$  _|$$ |  $$ |      $$  __$$\\ $$  _____|$$ |   $$ |$$  _____|$$$\\  $$ |
+$$ /  \\__|  $$ |  \\$$\\ $$  |      $$ /  \\__|$$ |      $$ |   $$ |$$ |      $$$$\\ $$ |
+\\$$$$$$\\    $$ |   \\$$$$  /       \\$$$$$$\\  $$$$$\\    \\$$\\  $$  |$$$$$\\    $$ $$\\$$ |
+ \\____$$\\   $$ |   $$  $$<         \\____$$\\ $$  __|    \\$$\\$$  / $$  __|   $$ \\$$$$ |
+$$\\   $$ |  $$ |  $$  /\\$$\\       $$\\   $$ |$$ |        \\$$$  /  $$ |      $$ |\\$$$ |
+\\$$$$$$  |$$$$$$\\ $$ /  $$ |      \\$$$$$$  |$$$$$$$$\\    \\$  /   $$$$$$$$\\ $$ | \\$$ |
+ \\______/ \\______|\\__|  \\__|       \\______/ \\________|    \\_/    \\________|\\__|  \\__|
+                                """, 
+                                """
+        6666666677777777777777777777
+       6::::::6 7::::::::::::::::::7
+      6::::::6  7::::::::::::::::::7
+     6::::::6   777777777777:::::::7
+    6::::::6               7::::::7 
+   6::::::6               7::::::7  
+  6::::::6               7::::::7   
+ 6::::::::66666         7::::::7    
+6::::::::::::::66      7::::::7     
+6::::::66666:::::6    7::::::7      
+6:::::6     6:::::6  7::::::7       
+6:::::6     6:::::6 7::::::7        
+6::::::66666::::::67::::::7         
+ 66:::::::::::::667::::::7          
+   66:::::::::66 7::::::7           
+     666666666  77777777
+                                """,
+                                """
+                _________  
+               /         | 
+              '-----.   .' 
+     .-''''-.     .'  .'   
+    /  .--.  \\  .'  .'     
+   /  /    '-'.'  .'       
+  /  /.--.   '---'         
+ /  ' _   \\                
+/   .' )   |               
+|   (_.'   /               
+ \\       '                 
+   `----'                       
+                                """,
+                                """
+   __      _____  
+U /"/_ u  |___ "| 
+\\| '_ \\/     / /  
+ | (_) |  u// /\\  
+  \\___/    /_/ U  
+ _// \\\\_  <<>>_   
+(__) (__)(__)__)     
+                                """,
+                                """
+             
+ (        )  
+ )\\ )  ( /(  
+(()/(  )\\()) 
+ /(_))((_)\\  
+(_) /|__  /  
+ / _ \\ / /   
+ \\___//_/      
+                                """,
+                                """
+   oo_   wW  Ww wW    Ww       oo_         wWw    wWw     \\\\\\  /// 
+  /  _)-<(O)(O)(O)\\  /(O)     /  _)-<  wWw (O)    (O) wWw ((O)(O)) 
+  \\__ `.  (..)  `. \\/ .'      \\__ `.   (O)_( \\    / ) (O)_ | \\ ||  
+     `. |  ||     \\  /           `. | .' __)\\ \\  / / .' __)||\\\\||  
+     _| | _||_    /  \\           _| |(  _)  /  \\/  \\(  _)  || \\ |  
+  ,-'   |(_/\\_) .' /\\ `.      ,-'   | `.__) \\ `--' / `.__) ||  ||  
+ (_..--'       (_.'  `._)    (_..--'         `-..-'       (_/  \\_) 
+                                """,
+                                """
+  .-')           ) (`-.             .-')      ('-.        (`-.      ('-.       .-') _  
+ ( OO ).          ( OO ).          ( OO ).  _(  OO)     _(OO  )_  _(  OO)     ( OO ) ) 
+(_)---\\_)  ,-.-')(_/.  \\_)-.      (_)---\\_)(,------.,--(_/   ,. \\(,------.,--./ ,--,'  
+/    _ |   |  |OO)\\  `.'  /       /    _ |  |  .---'\\   \\   /(__/ |  .---'|   \\ |  |\\  
+\\  :` `.   |  |  \\ \\     /\\       \\  :` `.  |  |     \\   \\ /   /  |  |    |    \\|  | ) 
+ '..`''.)  |  |(_/  \\   \\ |        '..`''.)(|  '--.   \\   '   /, (|  '--. |  .     |/  
+.-._)   \\ ,|  |_.' .'    \\_)      .-._)   \\ |  .--'    \\     /__) |  .--' |  |\\    |   
+\\       /(_|  |   /  .'.  \\       \\       / |  `---.    \\   /     |  `---.|  | \\   |   
+ `-----'   `--'  '--'   '--'       `-----'  `------'     `-'      `------'`--'  `--' 
+                                """,
+                                """
+            _____    ____________ _____       _____                   _____     _____\\    \\ _______    ______   _____\\    \\  _____    _____     
+       _____\\    \\  /            \\\\    \\     /    /              _____\\    \\   /    / |    |\\      |  |      | /    / |    ||\\    \\   \\    \\    
+      /    / \\    ||\\___/\\  \\\\___/|\\    |   |    /              /    / \\    | /    /  /___/| |     /  /     /|/    /  /___/| \\\\    \\   |    |   
+     |    |  /___/| \\|____\\  \\___|/ \\    \\ /    /              |    |  /___/||    |__ |___|/ |\\    \\  \\    |/|    |__ |___|/  \\\\    \\  |    |   
+  ____\\    \\ |   ||       |  |       \\    |    /            ____\\    \\ |   |||       \\       \\ \\    \\ |    | |       \\         \\|    \\ |    |   
+ /    /\\    \\|___|/  __  /   / __    /    |    \\           /    /\\    \\|___|/|     __/ __     \\|     \\|    | |     __/ __       |     \\|    |   
+|    |/ \\    \\      /  \\/   /_/  |  /    /|\\    \\         |    |/ \\    \\     |\\    \\  /  \\     |\\         /| |\\    \\  /  \\     /     /\\      \\  
+|\\____\\ /____/|    |____________/| |____|/ \\|____|        |\\____\\ /____/|    | \\____\\/    |    | \\_______/ | | \\____\\/    |   /_____/ /______/| 
+| |   ||    | |    |           | / |    |   |    |        | |   ||    | |    | |    |____/|     \\ |     | /  | |    |____/|  |      | |     | | 
+ \\|___||____|/     |___________|/  |____|   |____|         \\|___||____|/      \\|____|   | |      \\|_____|/    \\|____|   | |  |______|/|_____|/  
+                                                                                    |___|/                          |___|/                     
+                                """,
+                                """
+░░      ░░░        ░░  ░░░░  ░░░░░░░░░      ░░░        ░░  ░░░░  ░░        ░░   ░░░  ░
+▒  ▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒    ▒▒  ▒
+▓▓      ▓▓▓▓▓▓  ▓▓▓▓▓▓▓    ▓▓▓▓▓▓▓▓▓▓▓      ▓▓▓      ▓▓▓▓▓  ▓▓  ▓▓▓      ▓▓▓▓  ▓  ▓  ▓
+███████  █████  ██████  ██  ███████████████  ██  ██████████    ████  ████████  ██    █
+██      ███        ██  ████  █████████      ███        █████  █████        ██  ███   █
+                                """,
+                                """
+   ___     (_)    __ __     o O O   ___     ___    __ __    ___    _ _    
+  (_-<     | |    \\ \\ /    o       (_-<    / -_)   \\ V /   / -_)  | ' \\   
+  /__/_   _|_|_   /_\\_\\   TS__[O]  /__/_   \\___|   _\\_/_   \\___|  |_||_|  
+_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| {======|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| 
+"`-0-0-'"`-0-0-'"`-0-0-'./o--000'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
+                                """,
+                                """
+    __     ____                                                           
+   / /    |__  |                                                          
+  / _ \\     / /                                                           
+  \\___/   _/_/_                                                           
+_|\"\"\"\"\"|_|\"\"\"\"\"|                                                          
+"`-0-0-'"`-0=0-'
+                                """
+                            };
+
 }
 
 
@@ -4878,7 +4910,7 @@ class Helpers {
     // a balance between speed and ambience
     // 70 for slow, 40 medium (default) 20 really fast
     private static final int SLOW_TYPE_SPEED = 40;
-
+  
     /**
      * works just like python's sleep function <br>
      * here we set game speed
@@ -5030,8 +5062,7 @@ class Helpers {
             "CAPTAIN WE NEED TO STRIKE BACK! JUST GIVE US COORDS!",
         };
 
-        slowType(askMoveMessages[generateRandomInt(0, askMoveMessages.length - 1)]);
-        System.out.println();
+        slowType(askMoveMessages[generateRandomInt(0, askMoveMessages.length - 1)], false);
     }
 
 
